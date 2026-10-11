@@ -1,0 +1,8 @@
+node_modules/
+.env
+.env.example
+backend/uploads/*
+!backend/uploads/.gitkeep
+frontend/build/
+responsive-mega-menu/
+npm-debug.log*
