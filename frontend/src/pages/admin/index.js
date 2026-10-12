@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import CommunityPage from '../CommunityPage';
 import ChatPage from './chat';
 import EventsPage from './events';
 import GalleryPage from './gallery';

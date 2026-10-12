@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import axios from 'axios';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext, useAuth } from './context/AuthContext';
+import { api, backendUrl } from './api';
 import UserPages from './pages/users';
 import AdminPages from './pages/admin';
 import CommunityPage, { SiteHeader } from './pages/CommunityPage';
@@ -10,8 +10,6 @@ import Landing from './pages/Landing';
 import {
   ArrowRight, CalendarDays, Check, Image, Play, ShieldCheck, Upload, UserRound, X
 } from 'lucide-react';
-
-const api = axios.create({ withCredentials: true });
 
 function errorText(error) {
   return error.response?.data?.message || 'We could not complete that request. Please try again.';
@@ -254,5 +252,5 @@ function Admin({ profilePage = false }) {
 }
 
 function Avatar({ user }) {
-  return <span className="avatar">{user?.photo ? <img src={user.photo} alt="" /> : user?.name?.trim().charAt(0).toUpperCase() || 'C'}</span>;
+  return <span className="avatar">{user?.photo ? <img src={backendUrl(user.photo)} alt="" /> : user?.name?.trim().charAt(0).toUpperCase() || 'C'}</span>;
 }

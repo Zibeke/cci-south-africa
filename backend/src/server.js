@@ -5,6 +5,7 @@ const fs = require('fs');
 const http = require('http');
 const crypto = require('crypto');
 const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -36,6 +37,7 @@ const uploadDir = path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3005', credentials: true }));
 app.use(morgan('tiny'));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());

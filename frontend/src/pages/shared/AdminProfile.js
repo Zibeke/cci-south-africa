@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { ArrowLeft, Check, ShieldCheck, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const api = axios.create({ withCredentials: true });
+import { api } from '../../api';
 
 export default function AdminProfile() {
   const [name, setName] = useState('');

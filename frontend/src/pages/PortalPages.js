@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import axios from 'axios';
 import { io } from 'socket.io-client';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -7,16 +6,14 @@ import {
   MoreVertical, Paperclip, Search, Send, SquarePen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-const api = axios.create({ withCredentials: true });
+import { API_BASE_URL, api, backendUrl } from '../api';
 
 function requestError(error) {
   return error.response?.data?.message || 'We could not load this content. Please try again.';
 }
 
 function imageSource(image) {
-  if (!image) return '/original-site/thumbnail.png';
-  return image.startsWith('/uploads/') ? image : image;
+  return backendUrl(image || '/original-site/thumbnail.png');
 }
 
 function avatarColor(value = '') {
@@ -196,7 +193,7 @@ export function EventsPage({ admin = false, eventId }) {
                         {event.title && <h2>{event.title}</h2>}
                         {event.description && <p>{event.description}</p>}
                         {event.type === 'video'
-                          ? <video controls playsInline preload="metadata" poster="/original-site/CCI/videoImage.png"><source src={event.videoUrl} /></video>
+                          ? <video controls playsInline preload="metadata" poster={backendUrl('/original-site/CCI/videoImage.png')}><source src={backendUrl(event.videoUrl)} /></video>
                           : event.image && <img src={imageSource(event.image)} alt={event.title || ''} />}
                       </div>
                       <div className="post-actions">
@@ -355,7 +352,7 @@ export function ChatPage({ admin = false }) {
       })
       .catch((loadError) => { if (active) setError(requestError(loadError)); })
       .finally(() => { if (active) setUsersLoading(false); });
-    const socket = io(window.location.origin, { withCredentials: true });
+    const socket = io(API_BASE_URL || window.location.origin, { withCredentials: true });
     socketRef.current = socket;
     socket.on('connect_error', (connectionError) => setError(connectionError.message || 'Chat connection failed.'));
     socket.on('message:new', (message) => {
