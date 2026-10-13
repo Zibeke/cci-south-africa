@@ -7,6 +7,8 @@ const Event = require('./src/models/Event');
 const Gallery = require('./src/models/Gallery');
 const Carousel = require('./src/models/Carousel');
 const Notification = require('./src/models/Notification');
+const ChatMessage = require('./src/models/ChatMessage');
+const Conversation = require('./src/models/Conversation');
 
 const adminEmail = 'zibeke@outlook.com';
 const accounts = [
@@ -212,6 +214,98 @@ async function seedDatabase() {
           isUpcoming: true,
           createdBy: admin._id,
           seedKey: `upcoming:${upcoming.title}`
+        }
+      },
+      { upsert: true, runValidators: true }
+    );
+  }
+
+  const chatSeeds = [
+    {
+      participants: [users['onwabe@outlook.com'], users['bandile@outlook.com']],
+      messages: [
+        {
+          sender: 'onwabe@outlook.com',
+          receiver: 'bandile@outlook.com',
+          message: 'Hi Bandile, are you joining the Community Career Day planning chat?',
+          createdAt: new Date('2026-10-12T08:30:00Z')
+        },
+        {
+          sender: 'bandile@outlook.com',
+          receiver: 'onwabe@outlook.com',
+          message: "Yes, I'll be there. I'll share the event details this afternoon.",
+          createdAt: new Date('2026-10-12T09:02:00Z')
+        }
+      ]
+    },
+    {
+      participants: [admin, users['onwabe@outlook.com']],
+      messages: [
+        {
+          sender: adminEmail,
+          receiver: 'onwabe@outlook.com',
+          message: 'Welcome to CCI Connect! You can find the latest events and updates on the Events page.',
+          createdAt: new Date('2026-10-11T11:15:00Z')
+        },
+        {
+          sender: 'onwabe@outlook.com',
+          receiver: adminEmail,
+          message: 'Thanks! I found the gallery too.',
+          createdAt: new Date('2026-10-12T10:20:00Z')
+        }
+      ]
+    },
+    {
+      participants: [admin, users['bandile@outlook.com']],
+      messages: [
+        {
+          sender: adminEmail,
+          receiver: 'bandile@outlook.com',
+          message: 'Hi Bandile, the Heritage Day Cook-Off photos are in the Gallery.',
+          createdAt: new Date('2026-10-11T13:40:00Z')
+        },
+        {
+          sender: 'bandile@outlook.com',
+          receiver: adminEmail,
+          message: 'Great, thanks for sharing them.',
+          createdAt: new Date('2026-10-12T12:05:00Z')
+        }
+      ]
+    }
+  ];
+  for (const chat of chatSeeds) {
+    for (const message of chat.messages) {
+      const sender = users[message.sender];
+      const receiver = users[message.receiver];
+      await ChatMessage.findOneAndUpdate(
+        {
+          senderId: sender._id,
+          receiverId: receiver._id,
+          message: message.message,
+          createdAt: message.createdAt
+        },
+        {
+          $setOnInsert: {
+            senderId: sender._id,
+            receiverId: receiver._id,
+            message: message.message,
+            status: 'read',
+            createdAt: message.createdAt
+          }
+        },
+        { upsert: true, runValidators: true }
+      );
+    }
+
+    const [firstParticipant, secondParticipant] = chat.participants.sort((first, second) =>
+      String(first._id).localeCompare(String(second._id))
+    );
+    await Conversation.findOneAndUpdate(
+      { participants: { $all: [firstParticipant._id, secondParticipant._id], $size: 2 } },
+      {
+        $setOnInsert: {
+          participants: [firstParticipant._id, secondParticipant._id],
+          lastMessageAt: chat.messages[chat.messages.length - 1].createdAt
         }
       },
       { upsert: true, runValidators: true }

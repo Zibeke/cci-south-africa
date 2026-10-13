@@ -28,7 +28,7 @@ function profileHandle(profile) {
   return nameHandle || profile?.email?.split('@')[0] || '';
 }
 
-function ProfileAvatar({ profile, className = '' }) {
+export function ProfileAvatar({ profile, className = '' }) {
   const name = profile?.name || 'CCI member';
   const identity = profile?._id || profile?.id || name;
   return profile?.photo

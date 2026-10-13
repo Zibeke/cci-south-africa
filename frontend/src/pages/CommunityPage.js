@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL, api, backendUrl } from '../api';
-import { ChatPage as DataChatPage, EventsPage as DataEventsPage, GalleryPage as DataGalleryPage } from './PortalPages';
+import {
+  ChatPage as DataChatPage, EventsPage as DataEventsPage, GalleryPage as DataGalleryPage, ProfileAvatar
+} from './PortalPages';
 
 const albums = [
   { id: 'champions', title: 'Dinner of Champions', cover: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=900&q=85', photos: ['photo-1511795409834-ef04bbd61622', 'photo-1511578314322-379afb476865', 'photo-1527529482837-4698179dc6ce'] },
@@ -160,8 +162,8 @@ export function SiteHeader({ page, admin }) {
             <form className="header_search" role="search" onSubmit={(event) => event.preventDefault()}><input type="search" name="q" placeholder="Find CCI people & stories" aria-label="Search CCI" /><button type="submit" aria-label="Submit search"><i className="fa-solid fa-magnifying-glass" /></button></form>
             {!landing && <>
             <div className={`profile_menu${profileOpen ? ' active' : ''}`}>
-              <button className="profile_button" type="button" aria-expanded={profileOpen} aria-label="Open profile menu" onClick={() => setProfileOpen(!profileOpen)}><img src={backendUrl(user?.photo || '/original-site/thumbnail.png')} alt="Profile" className="profile_image" /><span className="profile_name">{user?.name?.split(' ')[0] || 'Member'}</span><i className="fa-solid fa-chevron-down" /></button>
-              <div className="profile_dropdown"><div className="profile_dropdown_header"><img src={backendUrl(user?.photo || '/original-site/thumbnail.png')} alt="Profile" className="profile_dropdown_image" /><div><strong>{user?.name || 'CCI Member'}</strong><span>CCI South Africa</span></div></div><div className="profile_dropdown_divider" />
+              <button className="profile_button" type="button" aria-expanded={profileOpen} aria-label="Open profile menu" onClick={() => setProfileOpen(!profileOpen)}><ProfileAvatar profile={user} className="profile_image" /><span className="profile_name">{user?.name?.split(' ')[0] || 'Member'}</span><i className="fa-solid fa-chevron-down" /></button>
+              <div className="profile_dropdown"><div className="profile_dropdown_header"><ProfileAvatar profile={user} className="profile_dropdown_image" /><div><strong>{user?.name || 'CCI Member'}</strong><span>CCI South Africa</span></div></div><div className="profile_dropdown_divider" />
                 {admin && <><Link to="/admin/profile" className="profile_dropdown_link"><i className="fa-regular fa-user" /><span>Manage Profile</span></Link><Link to="/admin/publish" className="profile_dropdown_link"><i className="fa-solid fa-pen-to-square" /><span>Create a post</span></Link></>}
                 <a href="#account" className="profile_dropdown_link"><i className="fa-solid fa-gear" /><span>Account Settings</span></a><a href="#notifications" className="profile_dropdown_link"><i className="fa-regular fa-bell" /><span>Notifications</span></a><a href="#password" className="profile_dropdown_link"><i className="fa-solid fa-lock" /><span>Change Password</span></a><div className="profile_dropdown_divider" /><button type="button" className="profile_dropdown_link logout_link" onClick={logout}><i className="fa-solid fa-arrow-right-from-bracket" /><span>Logout</span></button>
               </div></div></>}

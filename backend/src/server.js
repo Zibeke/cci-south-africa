@@ -82,11 +82,18 @@ const msal = msalReady ? new ConfidentialClientApplication({
 function setSession(res, user) {
   const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
   res.cookie('cci_session', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    ...sessionCookieOptions(),
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
+}
+
+function sessionCookieOptions() {
+  const secure = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    sameSite: secure ? 'none' : 'lax',
+    secure
+  };
 }
 
 function publicUser(user) {
@@ -176,7 +183,7 @@ app.get('/api/auth/microsoft/callback', async (req, res) => {
 
 app.get('/api/auth/me', authenticate, (req, res) => res.json({ user: publicUser(req.user) }));
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('cci_session', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  res.clearCookie('cci_session', sessionCookieOptions());
   res.json({ ok: true });
 });
 

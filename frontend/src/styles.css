@@ -93,6 +93,7 @@ button.profile_dropdown_link{width:100%;border:0;background:transparent;text-ali
 .profile-initial--color-3{color:#137333;background:#e6f4ea}
 .profile-initial--color-4{color:#a1420a;background:#fef7e0}
 .profile-initial--color-5{color:#007b83;background:#e0f2f1}
+.profile-initial{display:flex;align-items:center;justify-content:center;font-weight:700}
 .chat-avatar .profile-initial,.post-avatar.profile-initial,.event-comment>.profile-initial,.comment-form>.profile-initial{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
 .post-avatar.profile-initial{width:42px;height:42px;flex:0 0 42px;font-size:20px}
 .event-comment>.profile-initial,.comment-form>.profile-initial{width:30px;height:30px;flex:0 0 30px;font-size:13px}
