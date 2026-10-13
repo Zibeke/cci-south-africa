@@ -297,19 +297,15 @@ async function seedDatabase() {
       );
     }
 
-    const [firstParticipant, secondParticipant] = chat.participants.sort((first, second) =>
-      String(first._id).localeCompare(String(second._id))
-    );
-    await Conversation.findOneAndUpdate(
-      { participants: { $all: [firstParticipant._id, secondParticipant._id], $size: 2 } },
-      {
-        $setOnInsert: {
-          participants: [firstParticipant._id, secondParticipant._id],
-          lastMessageAt: chat.messages[chat.messages.length - 1].createdAt
-        }
-      },
-      { upsert: true, runValidators: true }
-    );
+    const existingConversation = await Conversation.findOne({
+      participants: { $all: chat.participants.map((participant) => participant._id), $size: 2 }
+    });
+    if (!existingConversation) {
+      await Conversation.create({
+        participants: chat.participants.map((participant) => participant._id),
+        lastMessageAt: chat.messages[chat.messages.length - 1].createdAt
+      });
+    }
   }
 }
 
