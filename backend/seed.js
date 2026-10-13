@@ -37,13 +37,13 @@ async function seedDatabase() {
     users[account.email] = await User.findOneAndUpdate(
       { email: account.email },
       {
-        $set: {
+        $setOnInsert: {
           name: account.name,
+          email: account.email,
           role: account.role,
           passwordHash,
           authProvider: 'local'
-        },
-        $setOnInsert: { email: account.email }
+        }
       },
       { upsert: true, new: true, runValidators: true }
     );
