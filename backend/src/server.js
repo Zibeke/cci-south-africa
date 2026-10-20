@@ -70,6 +70,94 @@ const upload = multer({
   }
 });
 
+const eventImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: uploadDir,
+    filename: (req, file, done) => done(null, `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`)
+  }),
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (req, file, done) => {
+    const allowed = /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype);
+    done(allowed ? null : new Error('Upload a JPG, PNG, WebP or GIF image.'), allowed);
+  }
+});
+
+const eventBlockTypes = new Set(['paragraph', 'subheading', 'image', 'link', 'bulletList', 'numberedList', 'quote', 'richText']);
+
+function validatedUrl(value, label, allowUploads = false) {
+  const url = String(value || '').trim();
+  if (allowUploads && /^\/uploads\/[a-zA-Z0-9._-]+$/.test(url)) return url;
+  if (allowUploads && /^\/original-site\/[a-zA-Z0-9._/-]+$/.test(url)) return url;
+  try {
+    const parsed = new URL(url);
+    if (['http:', 'https:'].includes(parsed.protocol)) return parsed.toString();
+  } catch (error) {
+    // Return the same validation error for malformed and unsupported URLs.
+  }
+  throw new Error(`${label} must be a valid HTTP or HTTPS URL${allowUploads ? ' or uploaded image path' : ''}.`);
+}
+
+function validateEventBlocks(blocks) {
+  if (!Array.isArray(blocks)) throw new Error('Article content must be a list of blocks.');
+  return blocks.map((block, position) => {
+    if (!block || !eventBlockTypes.has(block.type)) throw new Error('Choose a supported article block type.');
+    const normalized = { type: block.type, position };
+    const content = String(block.content || '').trim();
+    if (['paragraph', 'subheading', 'quote', 'richText'].includes(block.type)) {
+      const limit = block.type === 'subheading' ? 140 : 12000;
+      if (!content || content.length > limit) throw new Error(`Enter content for each ${block.type} block (up to ${limit} characters).`);
+      normalized.content = content;
+    }
+    if (block.type === 'subheading') {
+      if (!['h2', 'h3'].includes(block.headingLevel)) throw new Error('Choose H2 or H3 for each subheading.');
+      normalized.headingLevel = block.headingLevel;
+    }
+    if (block.type === 'image') {
+      normalized.src = validatedUrl(block.src, 'Article image', true);
+      normalized.alt = String(block.alt || '').trim().slice(0, 300);
+      normalized.caption = String(block.caption || '').trim().slice(0, 500);
+    }
+    if (block.type === 'link') {
+      if (!content || content.length > 500) throw new Error('Enter link text up to 500 characters.');
+      normalized.content = content;
+      normalized.url = validatedUrl(block.url, 'Link');
+    }
+    if (block.type === 'bulletList' || block.type === 'numberedList') {
+      const items = Array.isArray(block.items) ? block.items.map((item) => String(item || '').trim()).filter(Boolean) : [];
+      if (!items.length || items.some((item) => item.length > 2000)) throw new Error('Add at least one list item, each up to 2,000 characters.');
+      normalized.items = items;
+    }
+    return normalized;
+  });
+}
+
+function eventFields(body) {
+  const title = String(body.title || '').trim();
+  const description = String(body.description || '').trim();
+  const location = String(body.location || '').trim();
+  const status = String(body.status || 'published');
+  if (!title || title.length > 140) throw new Error('Enter an event title up to 140 characters.');
+  if (description.length > 12000) throw new Error('The legacy description must be 12,000 characters or fewer.');
+  if (location.length > 240) throw new Error('The event location must be 240 characters or fewer.');
+  if (!['draft', 'published'].includes(status)) throw new Error('Choose draft or published status.');
+  let startsAt = null;
+  if (body.startsAt) {
+    startsAt = new Date(body.startsAt);
+    if (Number.isNaN(startsAt.getTime())) throw new Error('Enter a valid event date and time.');
+  }
+  return {
+    title,
+    description,
+    contentBlocks: validateEventBlocks(body.contentBlocks || []),
+    image: body.image ? validatedUrl(body.image, 'Featured image', true) : '',
+    startsAt,
+    location,
+    registrationUrl: body.registrationUrl ? validatedUrl(body.registrationUrl, 'Registration link') : '',
+    isUpcoming: body.isUpcoming === true || body.isUpcoming === 'true',
+    status
+  };
+}
+
 const msalReady = Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET && process.env.MICROSOFT_TENANT_ID);
 const msal = msalReady ? new ConfidentialClientApplication({
   auth: {
@@ -91,6 +179,7 @@ function sessionCookieOptions() {
   const secure = process.env.NODE_ENV === 'production';
   return {
     httpOnly: true,
+    path: '/',
     sameSite: secure ? 'none' : 'lax',
     secure
   };
@@ -184,6 +273,7 @@ app.get('/api/auth/microsoft/callback', async (req, res) => {
 app.get('/api/auth/me', authenticate, (req, res) => res.json({ user: publicUser(req.user) }));
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('cci_session', sessionCookieOptions());
+  res.clearCookie('cci_session', { ...sessionCookieOptions(), path: '/api/auth' });
   res.json({ ok: true });
 });
 
@@ -216,12 +306,67 @@ app.get('/api/posts', authenticate, async (req, res) => {
 
 app.get('/api/events', authenticate, async (req, res) => {
   const upcomingOnly = req.query.upcoming === 'true';
-  const events = await Event.find({ isUpcoming: upcomingOnly })
+  const events = await Event.find({ isUpcoming: upcomingOnly, status: { $ne: 'draft' } })
     .populate('createdBy', 'name email photo role')
     .populate('likes', 'name photo')
     .populate('comments.userId', 'name photo role')
     .sort(upcomingOnly ? { startsAt: 1 } : { createdAt: -1 });
   res.json(events);
+});
+
+app.get('/api/admin/events', authenticate, requireAdmin, async (req, res) => {
+  const events = await Event.find({ type: 'event' })
+    .populate('createdBy', 'name email photo role')
+    .sort({ createdAt: -1 });
+  res.json(events);
+});
+
+app.post('/api/admin/event-images', authenticate, requireAdmin, (req, res, next) => {
+  eventImageUpload.single('image')(req, res, (error) => {
+    if (error) return res.status(400).json({ message: error.message });
+    if (!req.file) return res.status(400).json({ message: 'Choose an image to upload.' });
+    res.status(201).json({ image: `/uploads/${req.file.filename}` });
+  });
+});
+
+app.post('/api/admin/events', authenticate, requireAdmin, async (req, res) => {
+  let fields;
+  try {
+    fields = eventFields(req.body);
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+  const event = await Event.create({ ...fields, type: 'event', createdBy: req.user._id });
+  await event.populate('createdBy', 'name email photo role');
+  if (event.status === 'published') {
+    const notification = await Notification.create({
+      type: 'event', title: event.title, message: `A new event, ${event.title}, has been posted.`, relatedId: event._id, forAllUsers: true
+    });
+    io.emit('notification:new', notification);
+  }
+  res.status(201).json(event);
+});
+
+app.patch('/api/admin/events/:id', authenticate, requireAdmin, async (req, res) => {
+  let fields;
+  try {
+    fields = eventFields(req.body);
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+  const event = await Event.findOne({ _id: req.params.id, type: 'event' });
+  if (!event) return res.status(404).json({ message: 'Event not found.' });
+  const wasDraft = event.status === 'draft';
+  Object.assign(event, fields);
+  await event.save();
+  await event.populate('createdBy', 'name email photo role');
+  if (wasDraft && event.status === 'published') {
+    const notification = await Notification.create({
+      type: 'event', title: event.title, message: `A new event, ${event.title}, has been posted.`, relatedId: event._id, forAllUsers: true
+    });
+    io.emit('notification:new', notification);
+  }
+  res.json(event);
 });
 
 app.get('/api/gallery', authenticate, async (req, res) => {
@@ -269,7 +414,7 @@ app.post('/api/events/:id/comments', authenticate, async (req, res) => {
   const text = String(req.body.text || '').trim();
   if (!text || text.length > 1000) return res.status(400).json({ message: 'Comments must be 1 to 1,000 characters.' });
   const event = await Event.findById(req.params.id);
-  if (!event || event.isUpcoming) return res.status(404).json({ message: 'Event not found.' });
+  if (!event || event.isUpcoming || event.status === 'draft') return res.status(404).json({ message: 'Event not found.' });
   event.comments.push({ userId: req.user._id, text });
   await event.save();
   await event.populate('comments.userId', 'name photo role');
@@ -278,7 +423,7 @@ app.post('/api/events/:id/comments', authenticate, async (req, res) => {
 
 app.post('/api/events/:id/likes', authenticate, async (req, res) => {
   const event = await Event.findById(req.params.id);
-  if (!event || event.isUpcoming) return res.status(404).json({ message: 'Event not found.' });
+  if (!event || event.isUpcoming || event.status === 'draft') return res.status(404).json({ message: 'Event not found.' });
   const alreadyLiked = event.likes.some((userId) => userId.equals(req.user._id));
   if (alreadyLiked) event.likes.pull(req.user._id);
   else event.likes.addToSet(req.user._id);

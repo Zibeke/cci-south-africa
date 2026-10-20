@@ -34,6 +34,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/admin/login" element={<Login adminOnly />} />
         <Route path="/home" element={<Protected><CommunityPage page="home" /></Protected>} />
+        <Route path="/my-cci" element={<Protected><CommunityPage page="my-cci" /></Protected>} />
         <Route path="/events" element={<Protected><CommunityPage page="events" /></Protected>} />
         <Route path="/events/:eventId" element={<Protected><EventDetail /></Protected>} />
         <Route path="/gallery" element={<Protected><CommunityPage page="gallery" /></Protected>} />
@@ -56,7 +57,10 @@ function Protected({ children, admin = false }) {
   const { user, checking } = useAuth();
   const location = useLocation();
   if (checking) return <div className="screen-loading"><span className="loading-mark">CCI</span></div>;
-  if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  if (!user?.id) {
+    const from = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to="/login" state={{ from }} replace />;
+  }
   if (admin && user.role !== 'admin') return <Navigate to="/home" replace />;
   return children;
 }

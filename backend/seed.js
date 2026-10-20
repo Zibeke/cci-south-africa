@@ -11,6 +11,65 @@ const ChatMessage = require('./src/models/ChatMessage');
 const Conversation = require('./src/models/Conversation');
 
 const adminEmail = 'zibeke@outlook.com';
+const bpoArticle = `Business Process Outsourcing (BPO) is not new. In the 1980s and 1990s, companies began outsourcing their back-office functions like payroll processing, accounting and data entry to a third-party provider.
+
+This allowed them to reduce operational costs and focus on their core business while still receiving the services they needed to operate.
+
+As little as 10 years ago, the Business Process Outsourcing (BPO) industry was viewed as a lever for cost reduction and operational efficiency, where call centres and back-office support were outsourced.
+
+Automation was, by today's standards, fairly basic, and client expectations were for low-cost standardised services. This led to varied customer experiences and some less-than-optimal outcomes for the customer.
+
+Regrettably, the hangover from that time is a degree of reluctance by customers to engage with contact centres. However, the BPO industry has evolved far beyond those humble origins.
+
+### The industry has evolved
+
+The sector is booming - globally, the [BPO market](https://aamn.africa/the-future-of-bpo-in-africa-a-new-frontier-for-global-outsourcing/) was valued at more than $285.76 billion in 2024 and is projected to reach over $544 billion by 2032. From a starting point of cost reduction and operational efficiency, today the BPO industry is about strategic value creation, customer experience and innovation.
+
+This evolution hasn't happened by chance. As the sector has grown, BPO has adapted significantly to meet new client needs and embrace the advances that new technologies have offered.
+
+As the industry has become more sophisticated, BPO providers have become strategic business partners to their clients.
+
+Whereas previously BPO companies were seen as merely the delegated third-party service providers that handled non-core business functions, the sector now encompasses a wide range of services including customer service, IT support, finance, human resources and accounting.
+
+It even provides specialised services and solutions to industries with specific sectoral and regulatory requirements, like healthcare, insurance and financial services. And, by using data-driven insights derived from customer interactions, BPO organisations' clients have an effective tool to improve their customer satisfaction and make strategic decisions about products and services.
+
+### Technology has influenced the evolution of BPO
+
+Technology is increasingly playing a pivotal role in transforming the BPO landscape. Artificial Intelligence (AI) is the talk of the proverbial town currently, but this is by no means the first technology to disrupt the BPO sector.
+
+Changing consumer behaviour and the expectation of 24/7 support, along with a drive towards self-service, marked a critical shift in the industry, with the introduction of chatbots, robotic process automation (RPA) and various iterations of machine learning. This resulted in the industry refocusing away from the low-value work that is easy to automate.
+
+Technology innovation is enhancing service delivery and improving efficiency, moving the sector towards being tech-enabled service providers. Now, the bulk of interactions managed by call centres are high-emotion, high-complexity customer engagements where the human factor is a key distinguishing feature in the success of the interaction.
+
+Emotionally intelligent agents are indispensable, bringing a nuanced understanding of customer sentiment that results in a service that exceeds expectations and leaves a lasting positive impact on the overall customer experience.
+
+Technology, and specifically AI, is transforming the way knowledge is managed and used in contact centres.
+
+AI is helping human agents deliver high-value services to customers who need a more complex and emotionally sensitive or nuanced interaction, with LLMs helping these agents almost instantly find the best match or answer to a query, and providing real-time, contextually aware AI translation capabilities and live transcription on calls.
+
+With AI as an enabling technology embedded in the industry, this is dramatically increasing the value and quality of customer engagements.
+
+### Africa is becoming an industry leader
+
+Africa, once an insignificant player, now commands growing attention due to its young, educated, multilingual, and tech-savvy workforce, with over 60% of the population under 25. In 2025, [Africa's BPO](https://www.statista.com/outlook/tmo/it-services/business-process-outsourcing/africa) market is forecasted to reach $7.15 billion, with a projected CAGR of 5.66%, reaching $9.42 billion by 2030.
+
+South Africa is leading the charge on the continent, followed by Nigeria, Kenya, Egypt, and Ghana, with each country developing robust infrastructure and policy frameworks to attract global contracts.
+
+Government-backed initiatives such as tax incentives and infrastructure investments, along with business-friendly strategic policies, are helping to drive the boom.
+
+Africa offers a large pool of English-speaking professionals, with increasing specialisation in tech and customer experience, while ongoing investments into digital infrastructure such as fibre-optic networks and cloud services have enabled seamless service delivery. The integration of advanced technologies such as AI and automation into BPO services enhances operations and enables faster and more accurate processing of tasks. That, combined with the cost advantages of outsourcing to Africa, will help the industry grow while allowing companies to allocate resources more efficiently.
+
+### The next evolution of the BPO sector will be driven by value, digital innovation and strategic partnerships
+
+The transformation of the BPO industry from its origins as a cost-saving mechanism to its current role as a driver of innovation and strategic value underscores the sector's ongoing relevance in an ever-evolving global marketplace.
+
+As Africa rises to prominence and technological advances redefine service delivery, businesses that embrace these changes will be best positioned to thrive.
+
+The journey of BPO is a story of continual adaptation, where those willing to innovate and invest in talent will shape the future of customer experience and operational excellence.
+
+Africa is emerging as a formidable player in the global industry - with its skilled workforce and a diverse talent pool, the quality of services offered by BPO companies on the continent will continue to attract investment.
+
+**#CCI #WomenInLeadership #HumanConnections #Business Results**`;
 const accounts = [
   { name: 'liyema zibeke', email: adminEmail, role: 'admin' },
   { name: 'onwabe zibeke', email: 'onwabe@outlook.com', role: 'user' },
@@ -101,6 +160,11 @@ async function seedDatabase() {
     );
     seededEvents[seed.key] = event;
   }
+  await Event.updateOne(
+    { seedKey: 'careerbox-feature' },
+    { $set: { description: bpoArticle, hashtags: ['#CCI', '#WomenInLeadership', '#HumanConnections', '#Business Results'] } },
+    { runValidators: true }
+  );
 
   const carouselSeeds = [
     ...eventSeeds.map((seed) => ({

@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, Check, CheckCheck, Ellipsis, Heart, House, MessageCircle,
+  ArrowLeft, Check, CheckCheck, Ellipsis, Heart, House, MessageCircle, X,
   MoreVertical, Paperclip, Search, Send, SquarePen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL, api, backendUrl } from '../api';
+import { EventArticle } from './shared/EventContentEditor';
 
 function requestError(error) {
   return error.response?.data?.message || 'We could not load this content. Please try again.';
@@ -26,6 +27,25 @@ function profileHandle(profile) {
   if (profile?.username) return profile.username.replace(/^@/, '');
   const nameHandle = profile?.name?.replace(/[^a-z0-9]/gi, '').toLowerCase();
   return nameHandle || profile?.email?.split('@')[0] || '';
+}
+
+function renderArticleInline(text) {
+  return text.split(/(\[[^\]]+\]\(https?:\/\/[^)]+\)|\*\*[^*]+\*\*)/g).map((part, index) => {
+    const link = part.match(/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/);
+    if (link) return <a key={index} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>;
+    const bold = part.match(/^\*\*(.+)\*\*$/);
+    if (bold) return <strong key={index}>{bold[1]}</strong>;
+    return part;
+  });
+}
+
+function renderArticle(description) {
+  return String(description).trim().split(/\n\s*\n/).filter(Boolean).map((block, index) => {
+    const heading = block.match(/^###\s+(.+)$/);
+    return heading
+      ? <h3 key={index}>{heading[1]}</h3>
+      : <p key={index}>{renderArticleInline(block.replace(/\n/g, ' '))}</p>;
+  });
 }
 
 export function ProfileAvatar({ profile, className = '' }) {
@@ -70,8 +90,9 @@ export function EventsPage({ admin = false, eventId }) {
     return () => { active = false; };
   }, []);
 
+  const allEvents = [...events, ...upcoming.filter((event) => !events.some((item) => item._id === event._id))];
   const displayedEvents = requestedEvent
-    ? events.filter((event) => event._id === requestedEvent)
+    ? allEvents.filter((event) => event._id === requestedEvent)
     : events;
   const unreadNotifications = notifications.filter((notification) => !notification.isRead);
   const displayedNotifications = (unreadNotifications.length ? unreadNotifications : notifications).slice(0, 3);
@@ -150,12 +171,6 @@ export function EventsPage({ admin = false, eventId }) {
     <main className={`events-page page-shell${requestedEvent ? ' has-event-detail' : ''}`}>
       <div className="events-layout">
         <section className="events-feed" aria-label="Events and updates">
-          {requestedEvent && (
-            <Link className="event-detail-back" to={admin ? '/admin/events' : '/events'} onClick={() => setSearchParams({})}>
-              <i className="fa-solid fa-arrow-left" aria-hidden="true" />
-              <span>All events</span>
-            </Link>
-          )}
           {error && <p className="form-message" role="alert">{error}</p>}
           {loading ? <div className="events-post-list" role="status" aria-label="Loading events">{[0, 1, 2].map((item) => <article className="event-post event-post-skeleton" key={item} aria-hidden="true"><header className="post-header"><span className="skeleton-block skeleton-avatar" /><span className="skeleton-author"><i className="skeleton-block skeleton-line skeleton-name" /><i className="skeleton-block skeleton-line skeleton-handle" /></span><i className="skeleton-block skeleton-line skeleton-date" /><i className="skeleton-block skeleton-menu" /></header><div className="post-content"><i className="skeleton-block skeleton-copy" /><i className="skeleton-block skeleton-copy skeleton-copy-short" /><i className="skeleton-block skeleton-media" /></div><div className="post-actions"><i className="skeleton-block skeleton-action" /><i className="skeleton-block skeleton-action" /><i className="skeleton-block skeleton-action-date" /></div></article>)}</div>
             : displayedEvents.length === 0
@@ -167,6 +182,15 @@ export function EventsPage({ admin = false, eventId }) {
                   const authorHandle = profileHandle(author);
                   const createdAt = new Date(event.createdAt);
                   const commentsExpanded = commentsOpen[event._id] ?? requestedEvent === event._id;
+                  const isDetail = requestedEvent === event._id;
+                  const blockSummary = (event.contentBlocks || []).map((block) => [block.content, ...(block.items || [])].filter(Boolean).join(' ')).join(' ');
+                  const plainDescription = (event.description || blockSummary)
+                    .replace(/^#{1,6}\s+/gm, '')
+                    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+                    .replace(/\*\*/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                  const descriptionExcerpt = plainDescription.length > 320 ? `${plainDescription.slice(0, 320).trimEnd()}...` : plainDescription;
                   return (
                     <article
                       className="event-post"
@@ -183,18 +207,33 @@ export function EventsPage({ admin = false, eventId }) {
                         navigate(admin ? `/admin/events/${event._id}` : `/events/${event._id}`);
                       }}
                     >
-                      <header className="post-header">
-                        <ProfileAvatar profile={author} className="post-avatar" />
-                        <div className="post-author"><strong>{author.name || 'CCI South Africa'}</strong><span>{authorHandle && `@${authorHandle}`}</span></div>
-                        <time dateTime={event.createdAt}>{createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {createdAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>
-                        <button className="bare-icon-button post-menu" type="button" aria-label="Post options"><Ellipsis aria-hidden="true" /></button>
-                      </header>
-                      <div className="post-content">
+                      {requestedEvent === event._id
+                        ? <header className="event-detail-header">
+                          <Link className="event-detail-nav-button" to={admin ? '/admin/events' : '/events'} aria-label="Back to posts" onClick={() => setSearchParams({})}><ArrowLeft aria-hidden="true" /></Link>
+                          <ProfileAvatar profile={author} className="post-avatar" />
+                          <div className="post-author"><div className="event-detail-author-row"><strong>{author.name || 'CCI South Africa'}</strong><span>{authorHandle && `@${authorHandle}`}</span></div><time dateTime={event.createdAt}>Posted {createdAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time></div>
+                          <Link className="event-detail-nav-button event-detail-close" to={admin ? '/admin/events' : '/events'} aria-label="Close event details" onClick={() => setSearchParams({})}><X aria-hidden="true" /></Link>
+                        </header>
+                        : <header className="post-header">
+                          <ProfileAvatar profile={author} className="post-avatar" />
+                          <div className="post-author"><strong>{author.name || 'CCI South Africa'}</strong><span>{authorHandle && `@${authorHandle}`}</span></div>
+                          <time dateTime={event.createdAt}>{createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {createdAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>
+                          <button className="bare-icon-button post-menu" type="button" aria-label="Post options"><Ellipsis aria-hidden="true" /></button>
+                        </header>}
+                      <div className={`post-content${isDetail ? ' event-detail-content' : ''}`}>
                         {event.title && <h2>{event.title}</h2>}
-                        {event.description && <p>{event.description}</p>}
-                        {event.type === 'video'
+                        {isDetail && event.type === 'video' && <video controls playsInline preload="metadata" poster={backendUrl('/original-site/CCI/videoImage.png')}><source src={backendUrl(event.videoUrl)} /></video>}
+                        {isDetail && event.type !== 'video' && event.image && <img src={imageSource(event.image)} alt={event.title || ''} />}
+                        {isDetail && event.type === 'event' && event.startsAt && <p className="event-detail-meta"><strong>Date</strong><time dateTime={event.startsAt}>{new Date(event.startsAt).toLocaleString()}</time></p>}
+                        {isDetail && event.type === 'event' && event.location && <p className="event-detail-meta"><strong>Location</strong><span>{event.location}</span></p>}
+                        {isDetail && event.type === 'event' && event.registrationUrl && <p className="event-detail-registration"><a href={event.registrationUrl} target="_blank" rel="noopener noreferrer">Register for this event</a></p>}
+                        {isDetail && event.type === 'event' && event.contentBlocks?.length > 0
+                          ? <EventArticle blocks={event.contentBlocks} />
+                          : event.description && (isDetail ? renderArticle(event.description) : <p>{descriptionExcerpt}</p>)}
+                        {!isDetail && event.type === 'video'
                           ? <video controls playsInline preload="metadata" poster={backendUrl('/original-site/CCI/videoImage.png')}><source src={backendUrl(event.videoUrl)} /></video>
-                          : event.image && <img src={imageSource(event.image)} alt={event.title || ''} />}
+                          : !isDetail && event.image && <img src={imageSource(event.image)} alt={event.title || ''} />}
+                        {isDetail && event.type === 'event' && <img className="post-brand-footer" src="https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Connect_layout-03.png" alt="" />}
                       </div>
                       <div className="post-actions">
                         <div className="like-action-group">
@@ -213,13 +252,13 @@ export function EventsPage({ admin = false, eventId }) {
                         <div className="comment-list">
                           {(event.comments || []).map((comment) => (
                             <article className="event-comment" key={comment._id}>
-                              <ProfileAvatar profile={comment.userId} />
-                              <div><div className="comment-author"><strong>{comment.userId?.name || 'CCI member'}</strong>{profileHandle(comment.userId) && <span>@{profileHandle(comment.userId)}</span>}<time>{new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {new Date(comment.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time></div><p>{comment.text}</p></div>
+                              <ProfileAvatar profile={comment.userId} className="comment-avatar" />
+                              <div><div className="comment-author"><strong>{comment.userId?.name || 'CCI member'}</strong></div><p>{comment.text} <time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {new Date(comment.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time></p></div>
                             </article>
                           ))}
                         </div>
                         <form className="comment-form" onSubmit={(formEvent) => addComment(event, formEvent)}>
-                          <ProfileAvatar profile={user} />
+                          <ProfileAvatar profile={user} className="comment-avatar" />
                           <label className="visually-hidden" htmlFor={`comment-${event._id}`}>Add a comment</label>
                           <input ref={(input) => { commentInputRefs.current[event._id] = input; }} id={`comment-${event._id}`} name="comment" placeholder="Write a comment…" maxLength={1000} required />
                           <button type="submit" aria-label="Post comment"><Send aria-hidden="true" /></button>
@@ -252,7 +291,7 @@ export function EventsPage({ admin = false, eventId }) {
           <section className="events-side-panel" id="upcoming-events">
             <div className="side-panel-heading"><h2>Upcoming</h2><i className="fa-regular fa-calendar-days" aria-hidden="true" /></div>
             <div className="upcoming-events-list">
-              {upcoming.slice(0, 2).map((event) => <article className="upcoming-event" key={event._id}><time dateTime={event.startsAt}><strong>{new Date(event.startsAt).toLocaleDateString('en', { day: '2-digit' })}</strong><span>{new Date(event.startsAt).toLocaleDateString('en', { month: 'short' }).toUpperCase()}</span></time><div><h3>{event.title}</h3><p>{event.location}</p></div></article>)}
+              {upcoming.slice(0, 2).map((event) => <Link className="upcoming-event" key={event._id} to={`${admin ? '/admin' : ''}/events/${event._id}`}><time dateTime={event.startsAt}><strong>{new Date(event.startsAt).toLocaleDateString('en', { day: '2-digit' })}</strong><span>{new Date(event.startsAt).toLocaleDateString('en', { month: 'short' }).toUpperCase()}</span></time><div><h3>{event.title}</h3><p>{event.location}</p></div></Link>)}
             </div>
           </section>
           <section className="events-side-panel"><div className="side-panel-heading"><h2>Popular tags</h2><i className="fa-solid fa-hashtag" aria-hidden="true" /></div><div className="event-tags"><a href="#!">#PeopleFirst</a><a href="#!">#CareerBox</a><a href="#!">#CCICommunity</a></div></section>
@@ -264,6 +303,7 @@ export function EventsPage({ admin = false, eventId }) {
 
 export function GalleryPage() {
   const [galleries, setGalleries] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -276,6 +316,8 @@ export function GalleryPage() {
       if (active) setGalleries(data);
     }).catch((loadError) => {
       if (active) setError(requestError(loadError));
+    }).finally(() => {
+      if (active) setLoading(false);
     });
     return () => { active = false; };
   }, []);
@@ -297,11 +339,17 @@ export function GalleryPage() {
   const photos = selected?.galleryImages || [];
   return (
     <main className="gallery-page page-shell">
-      <header className="gallery-hero"><img src="https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1800&q=90" alt="Colleagues gathering at a CCI community event" /><div className="gallery-hero-copy"><h1>Gallery</h1><p>Browse moments from our people, events and communities.</p></div></header>
+      <header className="gallery-hero"><img src="https://connect.cci-digital.cloud/wp-content/uploads/2026/02/strikeaposestudios.co_.za-6574-1.jpg" alt="CCI colleagues gathering at a community event" /><div className="gallery-hero-copy"><h1>Gallery</h1><p>Browse moments from our people, events and communities.</p></div></header>
       {error && <p className="form-message" role="alert">{error}</p>}
-      {!selected ? <div className="gallery-months"><section className="gallery-month" aria-labelledby="gallery-current"><div className="month-heading"><h2 id="gallery-current">Photo albums</h2><span>{galleries.length} albums</span></div>
-        {galleries.length === 0 ? <p className="gallery-empty-state">No photo albums have been posted yet.</p> : <div className="album-grid">{galleries.map((gallery) => <button className="album-card" type="button" key={gallery._id} onClick={() => openGallery(gallery)}><span className="album-cover"><img src={imageSource(gallery.carouselImage || gallery.galleryImages[0])} alt="" loading="lazy" /></span><span className="album-card-copy"><strong>{gallery.heading}</strong><span>{gallery.galleryImages.length} photos</span></span></button>)}</div>}
-      </section></div> : <section className="gallery-album-view" aria-labelledby="album-view-title"><div className="album-view-heading"><button className="album-back" type="button" onClick={closeGallery}><i className="fa-solid fa-arrow-left" aria-hidden="true" /><span>All albums</span></button><div><p className="eyebrow">PHOTO ALBUM</p><h2 id="album-view-title">{selected.heading}</h2></div></div><div className="gallery-photo-grid">{photos.map((photo, index) =>       <button className="gallery-photo-button" type="button" key={`${photo}-${index}`} aria-label={`Open photo ${index + 1}`} onClick={() => { setPhotoIndex(index); setLightboxOpen(true); document.body.classList.add('lightbox-open'); }}><img src={imageSource(photo)} alt={`${selected.heading}, photo ${index + 1}`} loading="lazy" /></button>)}</div></section>}
+      {!selected ? <div className="gallery-months"><section className="gallery-month" aria-labelledby="gallery-current"><div className="month-heading"><h2 id="gallery-current">Photo albums</h2><span>{loading ? 'Loading...' : `${galleries.length} albums`}</span></div>
+        {loading
+          ? <div className="album-grid gallery-loading-grid" role="status" aria-label="Loading gallery">{[0, 1, 2, 3, 4, 5].map((item) => <div className="album-card gallery-card-skeleton" key={item} aria-hidden="true"><span className="album-cover skeleton-block" /><span className="album-card-copy"><i className="skeleton-block skeleton-line gallery-skeleton-title" /><i className="skeleton-block skeleton-line gallery-skeleton-count" /></span></div>)}</div>
+          : error
+            ? null
+            : galleries.length === 0
+              ? <p className="gallery-empty-state">No photo albums have been posted yet.</p>
+              : <div className="album-grid">{galleries.map((gallery) => <button className="album-card" type="button" key={gallery._id} onClick={() => openGallery(gallery)}><span className="album-cover"><GalleryImage src={imageSource(gallery.carouselImage || gallery.galleryImages[0])} alt="" loading="lazy" /></span><span className="album-card-copy"><strong>{gallery.heading}</strong><span>{gallery.galleryImages.length} photos</span></span></button>)}</div>}
+      </section></div> : <section className="gallery-album-view" aria-labelledby="album-view-title"><div className="album-view-heading"><button className="album-back" type="button" onClick={closeGallery}><i className="fa-solid fa-arrow-left" aria-hidden="true" /><span>All albums</span></button><div><p className="eyebrow">PHOTO ALBUM</p><h2 id="album-view-title">{selected.heading}</h2></div></div><div className="gallery-photo-grid">{photos.map((photo, index) => <button className="gallery-photo-button" type="button" key={`${photo}-${index}`} aria-label={`Open photo ${index + 1}`} onClick={() => { setPhotoIndex(index); setLightboxOpen(true); document.body.classList.add('lightbox-open'); }}><GalleryImage src={imageSource(photo)} alt={`${selected.heading}, item ${index + 1}`} loading="lazy" /></button>)}</div></section>}
       {selected && <div className="gallery-lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden={!lightboxOpen} onClick={(event) => { if (event.target === event.currentTarget) setLightboxOpen(false); }}>
         <button className="lightbox-close" type="button" aria-label="Close photo" onClick={() => setLightboxOpen(false)}><i className="fa-solid fa-xmark" /></button>
         <button className="lightbox-arrow lightbox-previous" type="button" aria-label="Previous photo" onClick={() => setPhotoIndex((photoIndex + photos.length - 1) % photos.length)}><i className="fa-solid fa-chevron-left" /></button>
@@ -310,6 +358,18 @@ export function GalleryPage() {
         <span className="lightbox-count">{photoIndex + 1} / {photos.length}</span>
       </div>}
     </main>
+  );
+}
+
+function GalleryImage({ src, alt, loading }) {
+  const [imageState, setImageState] = useState('loading');
+  return (
+    <>
+      {imageState === 'loading' && <span className="skeleton-block gallery-image-skeleton" aria-hidden="true" />}
+      {imageState === 'error'
+        ? <span className="gallery-image-error" role="img" aria-label="Image unavailable">Image unavailable</span>
+        : <img className={`gallery-image${imageState === 'loading' ? ' is-loading' : ''}`} src={src} alt={alt} loading={loading} onLoad={() => setImageState('loaded')} onError={() => setImageState('error')} />}
+    </>
   );
 }
 

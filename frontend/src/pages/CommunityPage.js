@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Captions, LoaderCircle, Maximize, Pause, PictureInPicture2, Play, RectangleHorizontal,
+  ArrowLeft, ArrowRight, Captions, LoaderCircle, Maximize, Pause, PictureInPicture2, Play, RectangleHorizontal,
   Repeat, Settings2, Volume2, VolumeX
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -18,17 +18,27 @@ const albums = [
   { id: 'community', title: 'Community Impact', cover: 'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&w=900&q=85', photos: ['photo-1531206715517-5c0ba140b2b8', 'photo-1469571486292-0ba58a3f068b', 'photo-1511632765486-a01980e01a18'] }
 ];
 
+const cciTopics = [
+  { title: 'Health', description: 'Our people are at the heart of CCI. We support wellbeing through practical resources, health initiatives and a culture that encourages everyone to look after themselves and one another.' },
+  { title: 'Loyalty Deals', description: 'CCI people can access a range of exclusive offers and everyday savings through our loyalty deals. Discover benefits chosen to make more of the things you enjoy.' },
+  { title: 'Onboarding', description: 'Starting somewhere new should feel welcoming. Our onboarding experience helps every new colleague meet their team, learn how we work and feel ready for their first day and beyond.' },
+  { title: 'Finance', description: 'Find helpful information for managing the financial details of working at CCI, from understanding your pay to accessing the tools and guidance available to you.' },
+  { title: 'Culture and Behaviour', description: 'Respect, inclusion and accountability shape how we work together. We build a culture where people can contribute, grow and feel part of a shared purpose.' },
+  { title: 'Career Growth', description: 'Your next opportunity can start here. Explore learning, development and career pathways that help you build new skills and progress at CCI.' }
+];
+
 export default function CommunityPage({ page, admin = false, onLogin, eventId, adminOnly = false }) {
   const { user } = useAuth();
   if (page === 'login') return <LoginPage onLogin={onLogin} adminOnly={adminOnly} />;
   const isAdmin = admin || user?.role === 'admin';
   return (
     <>
-      {page !== 'chat' && <SiteHeader page={page} admin={isAdmin} />}
+      {page !== 'chat' && !(page === 'events' && eventId) && <SiteHeader page={page} admin={isAdmin} />}
       {page === 'chat' && <DataChatPage admin={isAdmin} />}
       {page === 'events' && <DataEventsPage admin={isAdmin} eventId={eventId} />}
       {page === 'gallery' && <DataGalleryPage />}
-      {(page === 'home' || page === 'index') && <HomePage landing={page === 'index'} admin={isAdmin} />}
+      {page === 'my-cci' && <MyCciPage />}
+      {(page === 'home' || page === 'index') && <HomePage landing={page === 'index'} admin={isAdmin} user={user} />}
     </>
   );
 }
@@ -142,16 +152,16 @@ export function SiteHeader({ page, admin }) {
                 <div className="mega_content">
                   <div className="mega_group"><h3>About CCI</h3><a href="#about" className="mega_link"><i className="fa-solid fa-circle-question" /><span>Why CCI</span></a><a href="#about" className="mega_link"><i className="fa-solid fa-hand-holding-heart" /><span>Creating an Impact</span></a><a href="#locations" className="mega_link"><i className="fa-solid fa-location-dot" /><span>Our Sites</span></a><a href="#about" className="mega_link"><i className="fa-solid fa-people-group" /><span>Community</span></a></div>
                   <div className="mega_group"><h3>Our People</h3><a href="https://connectapps.ccisouthafrica.com/ccicareers/" className="mega_link"><i className="fa-solid fa-user-plus" /><span>Join Our Team</span></a><a href="https://connectapps.ccisouthafrica.com/ccicareers/" className="mega_link"><i className="fa-solid fa-briefcase" /><span>Careers</span></a><a href="#about" className="mega_link"><i className="fa-solid fa-circle-info" /><span>FAQs</span></a><a href="#about" className="mega_link"><i className="fa-regular fa-envelope" /><span>Contact Us</span></a></div>
-                  <div className="mega_group my_cci_group"><div className="group_heading"><h3>My CCI</h3><span className="internal_badge">Internal</span></div><p className="group_intro">Access employee services, resources and information.</p><div className="my_cci_links"><a href="#about"><i className="fa-solid fa-file-lines" /><span>Policies &amp; Procedures</span></a><a href="#about"><i className="fa-solid fa-link" /><span>Useful Links</span></a><a href="#about"><i className="fa-solid fa-clipboard-list" /><span>Admin Requests</span></a><Link to={landing ? '/login' : `${base}/gallery`}><i className="fa-regular fa-image" /><span>Gallery</span></Link></div><Link to={landing ? '/login' : `${base}/home`} className="my_cci_button"><span>Open My CCI</span><i className="fa-solid fa-arrow-right" /></Link></div>
+                  <div className="mega_group my_cci_group"><div className="group_heading"><h3>My CCI</h3><span className="internal_badge">Internal</span></div><p className="group_intro">Access employee services, resources and information.</p><div className="my_cci_links"><a href="#about"><i className="fa-solid fa-file-lines" /><span>Policies &amp; Procedures</span></a><a href="#about"><i className="fa-solid fa-link" /><span>Useful Links</span></a>{user ? <a href="https://online.sage.co.za/U25143#/signin" target="_blank" rel="noopener noreferrer"><i className="fa-solid fa-arrow-up-right-from-square" /><span>Sage ESS</span></a> : <Link to="/login"><i className="fa-solid fa-arrow-up-right-from-square" /><span>Sage ESS</span></Link>}<Link to={landing ? '/login' : `${base}/gallery`}><i className="fa-regular fa-image" /><span>Gallery</span></Link></div><Link to={landing ? '/login' : '/my-cci'} className="my_cci_button"><span>Open My CCI</span><i className="fa-solid fa-arrow-right" /></Link></div>
                 </div>
               </div></div>
             </li>
-            <li className="nav_list"><Link to={landing ? '/login' : `${base}/home`} className="nav_link">My CCI</Link></li>
+            <li className="nav_list"><Link to={landing ? '/login' : '/my-cci'} className={`nav_link${page === 'my-cci' ? ' active' : ''}`}>My CCI</Link></li>
             <li className="nav_list"><Link to={landing ? '/login' : `${base}/gallery`} className={`nav_link${page === 'gallery' ? ' active' : ''}`}>Gallery</Link></li>
             <li className="nav_list"><Link to={landing ? '/login' : `${base}/events`} className={`nav_link${page === 'events' ? ' active' : ''}`}>Events</Link></li>
-            {landing && <li className="nav_list landing-auth-mobile">{user
+            <li className="nav_list landing-auth-mobile">{user
               ? <button className="login-button landing-auth-action" type="button" onClick={logout}><i className="fa-solid fa-arrow-right-from-bracket" aria-hidden="true" /><span>Log out</span></button>
-              : <button className="login-button landing-auth-action" type="button" onClick={() => navigate('/login')}><i className="fa-solid fa-arrow-right-to-bracket" aria-hidden="true" /><span>Log in</span></button>}</li>}
+              : <button className="login-button landing-auth-action" type="button" onClick={() => navigate('/login')}><i className="fa-solid fa-arrow-right-to-bracket" aria-hidden="true" /><span>Log in</span></button>}</li>
           </ul>
           <div className="nav_action">
             {!landing && <>
@@ -177,6 +187,53 @@ export function SiteHeader({ page, admin }) {
       </div>
     </header>
   );
+}
+
+function MyCciPage() {
+  const [topicIndex, setTopicIndex] = useState(0);
+  const activeTopic = cciTopics[topicIndex];
+  const changeTopic = (direction) => {
+    setTopicIndex((current) => (current + direction + cciTopics.length) % cciTopics.length);
+  };
+
+  return <main className="my-cci-page">
+    <section className="my-cci-hero" aria-labelledby="my-cci-title">
+      <div className="my-cci-hero-shade" />
+      <div className="my-cci-hero-copy">
+        <h1 id="my-cci-title">Why CCI?</h1>
+      </div>
+    </section>
+
+    <section className="my-cci-video page-width" aria-labelledby="why-cci-title">
+      <div className="my-cci-video-frame">
+        <FeaturedVideo
+          item={{ videoUrl: 'https://connect.cci-digital.cloud/wp-content/uploads/2026/04/2026_01_22_10611373677_Edit_Video_EVP-Video_V2_Connect.mp4' }}
+          active
+          onPlayingChange={() => {}}
+          onNext={() => {}}
+          poster="https://connect.cci-digital.cloud/wp-content/uploads/2026/04/Top-Header-copy-3-1-760x270.webp"
+        />
+      </div>
+      <div className="my-cci-video-copy">
+        <h2 id="why-cci-title">My CCI</h2>
+        <p>Our people are what make CCI different. Watch the video to hear more about our purpose, our culture and the opportunities we create together.</p>
+      </div>
+    </section>
+
+    <section className="my-cci-topics page-width" aria-label="Explore more about CCI">
+      <div className="my-cci-topic-story" aria-live="polite" aria-atomic="true">
+        <p>{activeTopic.description}</p>
+        <div className="my-cci-topic-controls">
+          <button type="button" onClick={() => changeTopic(-1)} aria-label="Previous topic"><ArrowLeft aria-hidden="true" /></button>
+          <span>{String(topicIndex + 1).padStart(2, '0')} / {String(cciTopics.length).padStart(2, '0')}</span>
+          <button type="button" onClick={() => changeTopic(1)} aria-label="Next topic"><ArrowRight aria-hidden="true" /></button>
+        </div>
+      </div>
+      <div className="my-cci-topic-heading" aria-live="polite">
+        <h2>{activeTopic.title}</h2>
+      </div>
+    </section>
+  </main>;
 }
 
 function LoginPage({ onLogin, adminOnly = false }) {
@@ -261,7 +318,7 @@ function LoginPage({ onLogin, adminOnly = false }) {
   </div></section></main>;
 }
 
-function HomePage({ landing, admin }) {
+function HomePage({ landing, admin, user }) {
   const [slide, setSlide] = useState(0);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [locationsExpanded, setLocationsExpanded] = useState(false);
@@ -307,7 +364,7 @@ function HomePage({ landing, admin }) {
       {!slides.length && !carouselError && <p className="events-empty-state">No featured updates yet.</p>}
       <div className="carousel_controls"><div className="carousel_dots" aria-label="Choose a slide">{slides.map((item, index) => <button key={item._id} className={`carousel_dot${slide === index ? ' is-active' : ''}`} type="button" aria-label={`Show slide ${index + 1}`} aria-current={slide === index ? 'true' : undefined} onClick={() => setSlide(index)} />)}</div></div>
     </div>
-      <aside className="topLinks" aria-labelledby="top-links-title"><h2 id="top-links-title">Top Links</h2><div className="top_link_grid"><Link className="top_link" to={landing ? '/login' : `${base}/chat`}><i className="fa-regular fa-comments" /><span>{landing ? 'Chat Now' : 'Chat'}</span></Link><a className="top_link" href="https://connectapps.ccisouthafrica.com/ccicareers/"><i className="fa-solid fa-briefcase" /><span>{landing ? 'Job Portal' : 'Careers'}</span></a><Link className="top_link" to={landing ? '/login' : `${base}/events`}><i className="fa-solid fa-ticket" /><span>IT Ticket</span></Link><a className="top_link" href="#!"><i className="fa-regular fa-thumbs-up" /><span>Sho Peter</span></a><Link className="top_link" to={landing ? '/login' : `${base}/home`}><i className="fa-solid fa-user-shield" /><span>HR Ticket</span></Link><Link className="top_link" to={landing ? '/login' : `${base}/events`}><i className="fa-regular fa-calendar-days" /><span>Events</span></Link></div></aside>
+      <aside className="topLinks" aria-labelledby="top-links-title"><h2 id="top-links-title">Top Links</h2><div className="top_link_grid"><Link className="top_link" to={landing ? '/login' : `${base}/chat`}><i className="fa-regular fa-comments" /><span>{landing ? 'Chat Now' : 'Chat'}</span></Link><a className="top_link" href="https://connectapps.ccisouthafrica.com/ccicareers/"><i className="fa-solid fa-briefcase" /><span>{landing ? 'Job Portal' : 'Careers'}</span></a>{user ? <a className="top_link" href="https://servicedesk.cciglobal.com/" target="_blank" rel="noopener noreferrer"><i className="fa-solid fa-ticket" /><span>IT Ticket</span></a> : <Link className="top_link" to="/login"><i className="fa-solid fa-ticket" /><span>IT Ticket</span></Link>}<a className="top_link" href="#!"><i className="fa-regular fa-thumbs-up" /><span>Sho Peter</span></a><Link className="top_link" to={landing ? '/login' : `${base}/home`}><i className="fa-solid fa-user-shield" /><span>HR Ticket</span></Link><Link className="top_link" to={landing ? '/login' : `${base}/events`}><i className="fa-regular fa-calendar-days" /><span>Events</span></Link></div></aside>
     </section>
     <section className="locations-section" id="locations" aria-labelledby="locations-title"><header className="locations-heading"><h2 id="locations-title">Our Locations</h2><p>Explore our CCI offices and find the right team, from local hubs to regional centres.</p></header><div className={`locations-grid${locationsExpanded ? ' is-expanded' : ''}`} id="locations-grid">{[['KwaZulu-Natal','https://connect.cci-digital.cloud/wp-content/uploads/2026/02/KwaZulu_Natal.webp','Umhlanga House 1','3 The High Street, Umhlanga, Durban, 4319'],['Gauteng','https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Gauteng.webp','Sandton','6 Gwen Lane, 24 Central, Johannesburg, Gauteng, 2196'],['Western Cape','https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Western_Cape.webp','Newlands','08 Boundary Road, Newlands Terrace, Newlands'],['Kenya','https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Kenya.webp','Garden City','Garden City Business Park, Along Boulevard Drive, Nairobi'],['Rwanda','https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Rwanda.webp','Kigali','Masterpiece Mall, KN 5 Rd, Kigali'],['Ethiopia','https://connect.cci-digital.cloud/wp-content/uploads/2026/02/50c49f71-4379-425c-87cb-8518754c31f7.jpeg','Addis Ababa','Golagol, 22, Addis Ababa, Ethiopia'],['Egypt','https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Egypt.webp','Alexandria','Palm City Business HUB, Alexandria Governorate'],['Dubai','https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Dubai.webp','United Arab Emirates','Unit 3101 to 3108, HDS Tower, Jumeirah Lakes Towers, Dubai']].map(([name, image, location, address]) => <article className="location-card" key={name}><img src={image} alt={`${name} office location`} /><div className="location-details"><h3>{name}</h3><dl><div><dt>{location}</dt><dd>{address}</dd></div></dl></div></article>)}</div><button className="locations-toggle" type="button" aria-expanded={locationsExpanded} aria-controls="locations-grid" onClick={() => setLocationsExpanded(!locationsExpanded)}><span>{locationsExpanded ? 'View less' : 'View more'}</span><i className={`fa-solid fa-chevron-${locationsExpanded ? 'up' : 'down'}`} aria-hidden="true" /></button></section>
     <section className="about-us-template" id="about" aria-labelledby="who-we-are-title"><img className="about-us-first-image" src="https://connect.cci-digital.cloud/wp-content/uploads/2026/02/ABOUT_CCI.webp" alt="CCI South Africa team and workplace" /><div className="about-us-intro-copy"><h2 id="who-we-are-title">Who We Are</h2><div className="about-us-lead-copy"><p>CCI is an Africa focused business process outsourcing organization catering to a large portfolio of international clients from our delivery locations across the continent. Our emphasis on growth, quality service delivery and commitment to establishing long term partnerships has enabled us to become the top tier BPO operator in South Africa. CCI is transforming how we do business by being impact sourcing pioneers while retaining the essence of what makes us competitive, flexible and adaptable in a dynamic global business environment.</p><p>We are a diverse organization that operates from 7 locations across South Africa. Our focus has been on developing people combined with our client centric operating model creating a business enhancing, multichannel, multilingual delivery center capability servicing a global customer base 24×7×365. Our team’s diversity and socially conscious operating model have created a truly unique value proposition within the BPO space.</p></div></div><img className="about-us-wide-image" src="https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Elements.webp" alt="CCI's people-focused impact sourcing work" /><div className="about-us-details"><p>Through CareerBox (Impact Sourcing Innovators) we provide unique training and work opportunities for highly driven skilled young people who come from disadvantaged backgrounds. CCI South Africa helps set them up for future success as well as helping them make an immediate positive impact on their families and the societies they live in.</p><p>CareerBox has impacted over 200,000 lives and has a target of changing an additional 150,000 lives by 2025, impacting over 350,000 lives. CCI South Africa not only invest in communities through CareerBox, but we are also enhancing our shared capability and ensuring skill integration by creating community value in the markets we operate in.</p></div><div className="about-us-impact-images"><img className="about-us-impact-image" src="https://connect.cci-digital.cloud/wp-content/uploads/2026/02/7832685075_Design_CCI_World_Map_2024_11_14_v2_copy.jpg" alt="CCI's global locations map" /><img className="about-us-impact-image" src="https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Snipaste_2026-02-14_20-16-56-1024x999.webp" alt="CareerBox and CCI community impact" /></div></section>
@@ -315,7 +372,7 @@ function HomePage({ landing, admin }) {
   </main>;
 }
 
-function FeaturedVideo({ item, active, onPlayingChange, onNext }) {
+function FeaturedVideo({ item, active, onPlayingChange, onNext, poster }) {
   const playerRef = React.useRef(null);
   const videoRef = React.useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -386,7 +443,7 @@ function FeaturedVideo({ item, active, onPlayingChange, onNext }) {
         ref={videoRef}
         playsInline
         preload="auto"
-        poster={backendUrl('/original-site/CCI/videoImage.png')}
+        poster={poster || backendUrl('/original-site/CCI/videoImage.png')}
         aria-label="Featured CCI video"
         onLoadStart={() => setLoading(true)}
         onWaiting={() => setLoading(true)}
@@ -449,7 +506,7 @@ function GalleryPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const current = albums.find((item) => item.id === album);
   function photoUrl(id) { return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=85`; }
-  return <main className="gallery-page page-shell"><header className="gallery-hero"><img src="https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1800&q=90" alt="Colleagues gathering at a CCI community event" /><div className="gallery-hero-copy"><h1>Gallery</h1><p>Browse moments from our people, events and communities.</p></div></header>
+  return <main className="gallery-page page-shell"><header className="gallery-hero"><img src="https://connect.cci-digital.cloud/wp-content/uploads/2026/02/strikeaposestudios.co_.za-6574-1.jpg" alt="CCI colleagues gathering at a community event" /><div className="gallery-hero-copy"><h1>Gallery</h1><p>Browse moments from our people, events and communities.</p></div></header>
     {!current ? <div className="gallery-months">{[['September 2026', albums.slice(0, 2)], ['August 2026', albums.slice(2)]].map(([month, items]) => <section className="gallery-month" key={month}><div className="month-heading"><h2>{month}</h2><span>{items.length} albums</span></div><div className="album-grid">{items.map((item) => <button className="album-card" type="button" data-album={item.id} key={item.id} onClick={() => setAlbum(item.id)}><span className="album-cover"><img src={item.cover} alt={item.title} /></span><span className="album-card-copy"><strong>{item.title}</strong><span>{item.photos.length} photos <i className="fa-solid fa-arrow-up-right-from-square" /></span></span></button>)}</div></section>)}</div> : <section className="gallery-album-view"><div className="album-view-heading"><button className="album-back" type="button" onClick={() => setAlbum(null)}><i className="fa-solid fa-arrow-left" /><span>All albums</span></button><div><p className="eyebrow">PHOTO ALBUM</p><h2>{current.title}</h2></div></div><div className="gallery-photo-grid">{current.photos.map((photo, index) => <button type="button" key={photo} onClick={() => { setPhotoIndex(index); setLightboxOpen(true); }}><img src={photoUrl(photo)} alt={`${current.title}, photo ${index + 1}`} /></button>)}</div></section>}
     {current && lightboxOpen && <div className="gallery-lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer"><button className="lightbox-close" type="button" aria-label="Close photo" onClick={() => setLightboxOpen(false)}><i className="fa-solid fa-xmark" /></button><button className="lightbox-arrow lightbox-previous" type="button" aria-label="Previous photo" onClick={() => setPhotoIndex((photoIndex + current.photos.length - 1) % current.photos.length)}><i className="fa-solid fa-chevron-left" /></button><figure><img src={photoUrl(current.photos[photoIndex])} alt={`${current.title}, photo ${photoIndex + 1}`} /><figcaption>{current.title}</figcaption></figure><button className="lightbox-arrow lightbox-next" type="button" aria-label="Next photo" onClick={() => setPhotoIndex((photoIndex + 1) % current.photos.length)}><i className="fa-solid fa-chevron-right" /></button><span className="lightbox-count">{photoIndex + 1} / {current.photos.length}</span></div>}
   </main>;
