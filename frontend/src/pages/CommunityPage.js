@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Captions, LoaderCircle, Maximize, Pause, PictureInPicture2, Play, RectangleHorizontal,
+  ArrowLeft, ArrowRight, Captions, Check, ChevronDown, LoaderCircle, Maximize, Pause, PictureInPicture2, Play, RectangleHorizontal,
   Repeat, Settings2, Volume2, VolumeX
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -18,13 +18,60 @@ const albums = [
   { id: 'community', title: 'Community Impact', cover: 'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&w=900&q=85', photos: ['photo-1531206715517-5c0ba140b2b8', 'photo-1469571486292-0ba58a3f068b', 'photo-1511632765486-a01980e01a18'] }
 ];
 
-const cciTopics = [
-  { title: 'Health', description: 'Our people are at the heart of CCI. We support wellbeing through practical resources, health initiatives and a culture that encourages everyone to look after themselves and one another.' },
-  { title: 'Loyalty Deals', description: 'CCI people can access a range of exclusive offers and everyday savings through our loyalty deals. Discover benefits chosen to make more of the things you enjoy.' },
-  { title: 'Onboarding', description: 'Starting somewhere new should feel welcoming. Our onboarding experience helps every new colleague meet their team, learn how we work and feel ready for their first day and beyond.' },
-  { title: 'Finance', description: 'Find helpful information for managing the financial details of working at CCI, from understanding your pay to accessing the tools and guidance available to you.' },
-  { title: 'Culture and Behaviour', description: 'Respect, inclusion and accountability shape how we work together. We build a culture where people can contribute, grow and feel part of a shared purpose.' },
-  { title: 'Career Growth', description: 'Your next opportunity can start here. Explore learning, development and career pathways that help you build new skills and progress at CCI.' }
+const cciBenefits = [
+  {
+    title: 'Bosch Car Service',
+    summary: 'An exclusive 15% discount on selected vehicle services for CCI employees.',
+    description: 'CCI employees can now enjoy an exclusive 15% discount on vehicle servicing, maintenance, diagnostics, and repairs at participating RMS Automotive Group Bosch Car Service Centres.',
+    image: 'https://connect.cci-digital.cloud/wp-content/uploads/2026/06/carsss-01-01.webp',
+    alt: 'Bosch Car Service loyalty deal for CCI employees'
+  },
+  {
+    title: 'Renault',
+    summary: 'A valuable loyalty deal secured exclusively for CCI employees.',
+    description: 'At CCI we care about you and we love making your life a little easier. So, we are excited to share this valuable loyalty deal secured exclusively for our employees in partnership with Renault Durban CBD.',
+    image: 'https://connect.cci-digital.cloud/wp-content/uploads/2026/04/Untitled-2-01-1536x865.webp',
+    alt: 'Renault loyalty deal for CCI employees'
+  },
+  {
+    title: 'Virgin Active',
+    summary: 'CCI’s new Workplace Wellness Partner.',
+    description: 'We’re excited to announce that CCI has partnered with Virgin Active SA as our new Workplace Wellness Partner.',
+    image: 'https://connect.cci-digital.cloud/wp-content/uploads/2026/04/Untitled-4-01-1-scaled.png',
+    alt: 'Virgin Active workplace wellness partnership'
+  },
+  {
+    title: 'Vodacom',
+    summary: 'Enjoy discounted deals through our latest partnership.',
+    description: 'Enjoy discounted deals through our latest partnership.',
+    image: 'https://th.bing.com/th/id/OIP.crahn0HYdZ6-PImm7qqsZQHaE8?w=242&h=180&c=7&r=0&o=7&pid=1.7&rm=3',
+    alt: 'Vodacom logo',
+    imageFit: 'contain',
+    contact: 'onlineapprovals@coactivate.co.za'
+  }
+];
+
+const cciFaqs = [
+  {
+    question: 'What does CCI do?',
+    answer: 'CCI is an Africa-focused business process outsourcing organisation that partners with international clients to deliver customer experiences through its delivery locations across the continent.'
+  },
+  {
+    question: 'What is CareerBox?',
+    answer: 'CareerBox is CCI’s impact-sourcing initiative, providing skills training and work opportunities for young people from disadvantaged backgrounds.'
+  },
+  {
+    question: 'What can I do on CCI Connect?',
+    answer: 'Colleagues can follow community updates and events, browse shared photo galleries, and start direct conversations with one another.'
+  },
+  {
+    question: 'Which loyalty deals are featured?',
+    answer: 'The current offers shown here include Bosch Car Service, Renault Durban CBD, Virgin Active SA, and Vodacom. Open a deal card for its details.'
+  },
+  {
+    question: 'Who can help with the Vodacom deal?',
+    answer: 'For assistance with the Vodacom offer, email onlineapprovals@coactivate.co.za.'
+  }
 ];
 
 export default function CommunityPage({ page, admin = false, onLogin, eventId, adminOnly = false }) {
@@ -174,7 +221,7 @@ export function SiteHeader({ page, admin }) {
             <div className={`profile_menu${profileOpen ? ' active' : ''}`}>
               <button className="profile_button" type="button" aria-expanded={profileOpen} aria-label="Open profile menu" onClick={() => setProfileOpen(!profileOpen)}><ProfileAvatar profile={user} className="profile_image" /><span className="profile_name">{user?.name?.split(' ')[0] || 'Member'}</span><i className="fa-solid fa-chevron-down" /></button>
               <div className="profile_dropdown"><div className="profile_dropdown_header"><ProfileAvatar profile={user} className="profile_dropdown_image" /><div><strong>{user?.name || 'CCI Member'}</strong><span>CCI South Africa</span></div></div><div className="profile_dropdown_divider" />
-                {admin && <><Link to="/admin/profile" className="profile_dropdown_link"><i className="fa-regular fa-user" /><span>Manage Profile</span></Link><Link to="/admin/publish" className="profile_dropdown_link"><i className="fa-solid fa-pen-to-square" /><span>Create a post</span></Link></>}
+                {admin && <Link to="/admin/profile" className="profile_dropdown_link"><i className="fa-regular fa-user" /><span>Manage Profile</span></Link>}
                 <a href="#account" className="profile_dropdown_link"><i className="fa-solid fa-gear" /><span>Account Settings</span></a><a href="#notifications" className="profile_dropdown_link"><i className="fa-regular fa-bell" /><span>Notifications</span></a><a href="#password" className="profile_dropdown_link"><i className="fa-solid fa-lock" /><span>Change Password</span></a><div className="profile_dropdown_divider" /><button type="button" className="profile_dropdown_link logout_link" onClick={logout}><i className="fa-solid fa-arrow-right-from-bracket" /><span>Logout</span></button>
               </div></div></>}
             {landing && (user
@@ -190,11 +237,33 @@ export function SiteHeader({ page, admin }) {
 }
 
 function MyCciPage() {
-  const [topicIndex, setTopicIndex] = useState(0);
-  const activeTopic = cciTopics[topicIndex];
-  const changeTopic = (direction) => {
-    setTopicIndex((current) => (current + direction + cciTopics.length) % cciTopics.length);
-  };
+  const benefitsTrack = useRef(null);
+  const [expandedDeals, setExpandedDeals] = useState({});
+  const [openFaqs, setOpenFaqs] = useState({});
+  const [canScrollBenefitsBack, setCanScrollBenefitsBack] = useState(false);
+  const [canScrollBenefitsForward, setCanScrollBenefitsForward] = useState(true);
+
+  function updateBenefitControls() {
+    const track = benefitsTrack.current;
+    if (!track) return;
+    setCanScrollBenefitsBack(track.scrollLeft > 1);
+    setCanScrollBenefitsForward(track.scrollLeft + track.clientWidth < track.scrollWidth - 1);
+  }
+
+  function scrollBenefits(direction) {
+    const track = benefitsTrack.current;
+    if (!track) return;
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    const card = track.querySelector('.my-cci-benefit-card');
+    const gap = Number.parseFloat(window.getComputedStyle(track).columnGap) || 0;
+    track.scrollBy({ left: direction * ((card?.getBoundingClientRect().width || track.clientWidth) + gap), behavior });
+  }
+
+  useEffect(() => {
+    updateBenefitControls();
+    window.addEventListener('resize', updateBenefitControls);
+    return () => window.removeEventListener('resize', updateBenefitControls);
+  }, []);
 
   return <main className="my-cci-page">
     <section className="my-cci-hero" aria-labelledby="my-cci-title">
@@ -204,33 +273,102 @@ function MyCciPage() {
       </div>
     </section>
 
-    <section className="my-cci-video page-width" aria-labelledby="why-cci-title">
-      <div className="my-cci-video-frame">
-        <FeaturedVideo
-          item={{ videoUrl: 'https://connect.cci-digital.cloud/wp-content/uploads/2026/04/2026_01_22_10611373677_Edit_Video_EVP-Video_V2_Connect.mp4' }}
-          active
-          onPlayingChange={() => {}}
-          onNext={() => {}}
-          poster="https://connect.cci-digital.cloud/wp-content/uploads/2026/04/Top-Header-copy-3-1-760x270.webp"
-        />
-      </div>
-      <div className="my-cci-video-copy">
-        <h2 id="why-cci-title">My CCI</h2>
-        <p>Our people are what make CCI different. Watch the video to hear more about our purpose, our culture and the opportunities we create together.</p>
+    <section className="my-cci-why" aria-labelledby="why-cci-title">
+      <div className="my-cci-content-width my-cci-why-grid">
+        <div className="my-cci-video-frame">
+          <FeaturedVideo
+            item={{ videoUrl: 'https://connect.cci-digital.cloud/wp-content/uploads/2026/04/2026_01_22_10611373677_Edit_Video_EVP-Video_V2_Connect.mp4' }}
+            active
+            onPlayingChange={() => {}}
+            onNext={() => {}}
+            poster="https://connect.cci-digital.cloud/wp-content/uploads/2026/04/Top-Header-copy-3-1-760x270.webp"
+          />
+        </div>
+        <div className="my-cci-section-copy">
+          <span className="my-cci-eyebrow">People. Purpose. Progress.</span>
+          <h2 id="why-cci-title">Why CCI?</h2>
+          <p>CCI partners with international clients to deliver customer experiences through a client-centric operating model focused on quality service and long-term partnerships. With delivery locations across the continent, CCI brings multichannel and multilingual capabilities together with a focus on developing people; through CareerBox, the organisation also provides skills training and work opportunities for young people from disadvantaged backgrounds.</p>
+          <a className="my-cci-primary-link" href="https://connectapps.ccisouthafrica.com/ccicareers/" target="_blank" rel="noopener noreferrer">Explore careers <ArrowRight aria-hidden="true" /></a>
+        </div>
       </div>
     </section>
 
-    <section className="my-cci-topics page-width" aria-label="Explore more about CCI">
-      <div className="my-cci-topic-story" aria-live="polite" aria-atomic="true">
-        <p>{activeTopic.description}</p>
-        <div className="my-cci-topic-controls">
-          <button type="button" onClick={() => changeTopic(-1)} aria-label="Previous topic"><ArrowLeft aria-hidden="true" /></button>
-          <span>{String(topicIndex + 1).padStart(2, '0')} / {String(cciTopics.length).padStart(2, '0')}</span>
-          <button type="button" onClick={() => changeTopic(1)} aria-label="Next topic"><ArrowRight aria-hidden="true" /></button>
+    <section className="my-cci-benefits" aria-labelledby="my-cci-benefits-title">
+      <div className="my-cci-content-width">
+        <header className="my-cci-benefits-heading">
+          <span className="my-cci-eyebrow">The CCI Advantage</span>
+          <h2 id="my-cci-benefits-title">Loyalty Deals</h2>
+          <p>Explore current employee offers and partnerships available through CCI.</p>
+        </header>
+        <div className="my-cci-carousel-controls" aria-label="Benefits carousel controls">
+          <button type="button" aria-label="Previous benefits" onClick={() => scrollBenefits(-1)} disabled={!canScrollBenefitsBack}><ArrowLeft aria-hidden="true" /></button>
+          <button type="button" aria-label="Next benefits" onClick={() => scrollBenefits(1)} disabled={!canScrollBenefitsForward}><ArrowRight aria-hidden="true" /></button>
+        </div>
+        <div className="my-cci-benefits-track" ref={benefitsTrack} onScroll={updateBenefitControls} tabIndex="0" role="region" aria-label="CCI employee loyalty deals">
+          {cciBenefits.map((benefit, index) => <article className="my-cci-benefit-card" key={benefit.title}>
+            <img className={benefit.imageFit === 'contain' ? 'my-cci-loyalty-logo' : ''} src={benefit.image} alt={benefit.alt} loading="lazy" />
+            <div className="my-cci-benefit-copy">
+              <h3>{benefit.title}</h3>
+              <p>{benefit.summary}</p>
+              <div id={`my-cci-deal-details-${index}`} className="my-cci-deal-expanded" hidden={!expandedDeals[index]}>
+                <p>{index === 0 ? <>CCI employees can now enjoy an <strong>exclusive 15% discount</strong> on vehicle servicing, maintenance, diagnostics, and repairs at participating RMS Automotive Group Bosch Car Service Centres.</> : benefit.description}</p>
+                {benefit.contact && <p className="my-cci-deal-contact">For assistance, email <a href={`mailto:${benefit.contact}`}>{benefit.contact}</a>.</p>}
+              </div>
+              <button className="my-cci-view-more" type="button" aria-expanded={Boolean(expandedDeals[index])} aria-controls={`my-cci-deal-details-${index}`} onClick={() => setExpandedDeals((current) => ({ ...current, [index]: !current[index] }))}>
+                {expandedDeals[index] ? 'View less' : 'View more'} <ChevronDown className={expandedDeals[index] ? 'is-expanded' : ''} aria-hidden="true" />
+              </button>
+            </div>
+          </article>)}
         </div>
       </div>
-      <div className="my-cci-topic-heading" aria-live="polite">
-        <h2>{activeTopic.title}</h2>
+    </section>
+
+    <section className="my-cci-connect" aria-labelledby="my-cci-connect-title">
+      <div className="my-cci-content-width my-cci-connect-grid">
+        <div className="my-cci-connect-copy">
+          <span className="my-cci-eyebrow">Connected. Informed. Together.</span>
+          <h2 id="my-cci-connect-title">Introducing CCI Connect</h2>
+          <p>CCI Connect brings the CCI community into one place. Colleagues can keep up with company updates and events, browse shared photo galleries, and connect directly with one another.</p>
+          <ul className="my-cci-check-list">
+            <li><Check aria-hidden="true" />Follow community updates and events</li>
+            <li><Check aria-hidden="true" />Browse shared photo galleries</li>
+            <li><Check aria-hidden="true" />Start direct conversations with colleagues</li>
+          </ul>
+          <Link className="my-cci-connect-link" to="/chat">Explore CCI Connect <ArrowRight aria-hidden="true" /></Link>
+        </div>
+        <figure className="my-cci-connect-visual">
+          <FeaturedVideo
+            item={{ videoUrl: 'https://connect.cci-digital.cloud/wp-content/uploads/2026/04/2026_03_25_11578837864_Edit_Video_CCI-Video-For-CCI-Connect-2026.mp4' }}
+            active
+            onPlayingChange={() => {}}
+            onNext={() => {}}
+            poster="/images/connect.png"
+          />
+        </figure>
+      </div>
+    </section>
+
+    <section className="my-cci-faq" aria-labelledby="my-cci-faq-title">
+      <div className="my-cci-content-width my-cci-faq-inner">
+        <span className="my-cci-eyebrow">Need to know</span>
+        <h2 id="my-cci-faq-title">Frequently Asked Questions</h2>
+        <div className="my-cci-faq-list">
+          {cciFaqs.map((faq, index) => {
+            const isOpen = Boolean(openFaqs[index]);
+            const answerId = `my-cci-faq-answer-${index + 1}`;
+            return <article className={`my-cci-faq-item${isOpen ? ' is-open' : ''}`} key={faq.question}>
+              <h3>
+                <button className="my-cci-faq-question" type="button" aria-expanded={isOpen} aria-controls={answerId} onClick={() => setOpenFaqs((current) => ({ ...current, [index]: !current[index] }))}>
+                  <span>{faq.question}</span>
+                  <ChevronDown className="my-cci-faq-icon" aria-hidden="true" />
+                </button>
+              </h3>
+              <div className="my-cci-faq-answer" id={answerId} hidden={!isOpen}>
+                <p>{faq.answer}</p>
+              </div>
+            </article>;
+          })}
+        </div>
       </div>
     </section>
   </main>;

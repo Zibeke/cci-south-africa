@@ -136,10 +136,13 @@ function eventFields(body) {
   const description = String(body.description || '').trim();
   const location = String(body.location || '').trim();
   const status = String(body.status || 'published');
+  const showInCarousel = body.showInCarousel === true || body.showInCarousel === 'true';
   if (!title || title.length > 140) throw new Error('Enter an event title up to 140 characters.');
   if (description.length > 12000) throw new Error('The legacy description must be 12,000 characters or fewer.');
   if (location.length > 240) throw new Error('The event location must be 240 characters or fewer.');
   if (!['draft', 'published'].includes(status)) throw new Error('Choose draft or published status.');
+  const image = body.image ? validatedUrl(body.image, 'Featured image', true) : '';
+  if (showInCarousel && status === 'published' && !image) throw new Error('Upload a featured image before adding this event to the home carousel.');
   let startsAt = null;
   if (body.startsAt) {
     startsAt = new Date(body.startsAt);
@@ -149,13 +152,38 @@ function eventFields(body) {
     title,
     description,
     contentBlocks: validateEventBlocks(body.contentBlocks || []),
-    image: body.image ? validatedUrl(body.image, 'Featured image', true) : '',
+    image,
     startsAt,
     location,
     registrationUrl: body.registrationUrl ? validatedUrl(body.registrationUrl, 'Registration link') : '',
     isUpcoming: body.isUpcoming === true || body.isUpcoming === 'true',
+    showInCarousel,
     status
   };
+}
+
+async function syncEventCarousel(event, showInCarousel) {
+  const existingItem = await Carousel.findOne({ itemType: 'event', itemId: event._id });
+  if (!showInCarousel || event.status !== 'published') {
+    if (existingItem) await Carousel.deleteOne({ _id: existingItem._id });
+    return;
+  }
+  const articleCopy = (event.contentBlocks || [])
+    .map((block) => [block.content, ...(block.items || [])].filter(Boolean).join(' '))
+    .filter(Boolean)
+    .join(' ');
+  const carouselFields = {
+    heading: event.title,
+    image: event.image,
+    descriptionSnippet: String(event.description || articleCopy).replace(/\s+/g, ' ').trim().slice(0, 180),
+    createdAt: new Date()
+  };
+  if (existingItem) {
+    Object.assign(existingItem, carouselFields);
+    await existingItem.save();
+    return;
+  }
+  await addCarouselItem({ itemType: 'event', itemId: event._id, ...carouselFields });
 }
 
 const msalReady = Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET && process.env.MICROSOFT_TENANT_ID);
@@ -315,10 +343,12 @@ app.get('/api/events', authenticate, async (req, res) => {
 });
 
 app.get('/api/admin/events', authenticate, requireAdmin, async (req, res) => {
-  const events = await Event.find({ type: 'event' })
-    .populate('createdBy', 'name email photo role')
-    .sort({ createdAt: -1 });
-  res.json(events);
+  const [events, carouselItems] = await Promise.all([
+    Event.find({ type: 'event' }).populate('createdBy', 'name email photo role').sort({ createdAt: -1 }),
+    Carousel.find({ itemType: 'event' }).select('itemId')
+  ]);
+  const featuredIds = new Set(carouselItems.map((item) => String(item.itemId)));
+  res.json(events.map((event) => ({ ...event.toObject(), isInCarousel: featuredIds.has(String(event._id)) })));
 });
 
 app.post('/api/admin/event-images', authenticate, requireAdmin, (req, res, next) => {
@@ -336,8 +366,10 @@ app.post('/api/admin/events', authenticate, requireAdmin, async (req, res) => {
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
-  const event = await Event.create({ ...fields, type: 'event', createdBy: req.user._id });
+  const { showInCarousel, ...eventFieldsToSave } = fields;
+  const event = await Event.create({ ...eventFieldsToSave, type: 'event', createdBy: req.user._id });
   await event.populate('createdBy', 'name email photo role');
+  await syncEventCarousel(event, showInCarousel);
   if (event.status === 'published') {
     const notification = await Notification.create({
       type: 'event', title: event.title, message: `A new event, ${event.title}, has been posted.`, relatedId: event._id, forAllUsers: true
@@ -357,9 +389,11 @@ app.patch('/api/admin/events/:id', authenticate, requireAdmin, async (req, res) 
   const event = await Event.findOne({ _id: req.params.id, type: 'event' });
   if (!event) return res.status(404).json({ message: 'Event not found.' });
   const wasDraft = event.status === 'draft';
-  Object.assign(event, fields);
+  const { showInCarousel, ...eventFieldsToSave } = fields;
+  Object.assign(event, eventFieldsToSave);
   await event.save();
   await event.populate('createdBy', 'name email photo role');
+  await syncEventCarousel(event, showInCarousel);
   if (wasDraft && event.status === 'published') {
     const notification = await Notification.create({
       type: 'event', title: event.title, message: `A new event, ${event.title}, has been posted.`, relatedId: event._id, forAllUsers: true
