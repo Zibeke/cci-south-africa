@@ -9,7 +9,7 @@ import UserLoginPage from './pages/users/login';
 import Landing from './pages/Landing';
 import EventContentEditor from './pages/shared/EventContentEditor';
 import {
-  ArrowRight, CalendarDays, Check, Image, Play, ShieldCheck, Upload, X
+  ArrowRight, CalendarDays, Camera, Check, Heart, Image, Mail, Pencil, Play, Save, ShieldCheck, Upload, UserRound, Users, X
 } from 'lucide-react';
 
 function errorText(error) {
@@ -131,6 +131,7 @@ function Admin({ profilePage = false }) {
   const [busy, setBusy] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(null);
   const publishDialog = useRef(null);
+  const profileNameInput = useRef(null);
   useEffect(() => {
     if (profilePage && profileComposerOpen && publishDialog.current && !publishDialog.current.open) {
       publishDialog.current.showModal();
@@ -249,23 +250,59 @@ function Admin({ profilePage = false }) {
       <div className={`admin-layout ${profilePage ? 'admin-profile-page' : 'admin-publish-page'}`}>
         <section className={`admin-profile admin-section${profilePage ? ' admin-profile-editor' : ''}`}>
           <form className="profile-form" onSubmit={saveProfile}>
-            <div className="profile-photo-row"><Avatar user={{ ...user, photo: profilePhoto ? URL.createObjectURL(profilePhoto) : user.photo }} /><input id="profile-photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => setProfilePhoto(event.target.files?.[0] || null)} /><label className="profile-photo-upload button button-light" htmlFor="profile-photo"><Upload size={15} />Change profile photo</label></div>
-            <label htmlFor="admin-name">Display name</label><input id="admin-name" value={profileName} onChange={(event) => setProfileName(event.target.value)} maxLength={80} required />
-            <label>Email address</label><div className="readonly-field">{user.email}</div>
-            <button className="button button-dark" type="submit">Save profile <Check size={16} /></button>
+            <div className="admin-profile-cover" aria-hidden="true" />
+            <div className="profile-photo-row">
+              <Avatar user={{ ...user, photo: profilePhoto ? URL.createObjectURL(profilePhoto) : user.photo }} />
+              <input id="profile-photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => setProfilePhoto(event.target.files?.[0] || null)} />
+              <label className="profile-photo-upload button button-light" htmlFor="profile-photo" aria-label="Change profile photo"><Camera size={17} /></label>
+            </div>
+            <div className="admin-profile-summary">
+              <h1>{profileName || user.name}</h1>
+              <p><Mail size={16} aria-hidden="true" />{user.email}</p>
+              <span className="admin-profile-status"><i />{user?.id ? 'Active' : 'Inactive'}</span>
+            </div>
+            <div className="admin-profile-account-details">
+              <div className="admin-profile-account-row">
+                <UserRound size={20} aria-hidden="true" />
+                <label htmlFor="admin-name"><span>Display name</span><input ref={profileNameInput} id="admin-name" value={profileName} onChange={(event) => setProfileName(event.target.value)} maxLength={80} required /></label>
+                <button className="admin-profile-edit" type="button" aria-label="Edit display name" onClick={() => profileNameInput.current?.focus()}><Pencil size={16} /></button>
+              </div>
+              <div className="admin-profile-account-row">
+                <Mail size={20} aria-hidden="true" />
+                <div className="admin-profile-account-value"><span>Email address</span><strong>{user.email}</strong></div>
+                <Pencil className="admin-profile-edit-indicator" size={16} aria-hidden="true" />
+              </div>
+            </div>
+            {profilePage && status && <p className="success-message" role="status">{status}</p>}
+            {profilePage && error && <p className="form-message" role="alert">{error}</p>}
+            <button className="button button-dark" type="submit"><Save size={18} />Save profile <Check size={17} /></button>
           </form>
-          {profilePage && status && <p className="success-message" role="status">{status}</p>}
-          {profilePage && error && <p className="form-message" role="alert">{error}</p>}
           {!profilePage && <div className="admin-role-note"><ShieldCheck size={16} /><span>Admin publishing access</span></div>}
         </section>
         {profilePage ? <>
         <section className="admin-profile-publishing admin-section">
-          <div className="admin-section-heading"><span className="admin-section-icon"><Upload size={19} /></span><div><h2>Share with the community</h2><p>Choose what you want to publish. Your update will appear in the relevant community feed.</p></div></div>
-          <div className="admin-profile-publish-actions">
-            <button className="button button-dark" type="button" onClick={() => openProfileComposer('event')}>Create Event</button>
-            <button className="button button-dark" type="button" onClick={() => openProfileComposer('video')}>Add Video</button>
-            <button className="button button-dark" type="button" onClick={() => openProfileComposer('gallery')}>Create Gallery</button>
+          <div className="admin-section-heading">
+            <span className="admin-section-icon"><Users size={24} /></span>
+            <div><h2>Share with the community</h2><p>Create, post and engage. Share your moments, ideas and updates with the CCI community.</p></div>
+            <div className="admin-community-illustration" aria-hidden="true">
+              <span className="admin-community-orbit" />
+              <span className="admin-community-device"><Image size={27} /><i><Heart size={18} fill="currentColor" /></i></span>
+              <span className="admin-community-leaf admin-community-leaf-one" />
+              <span className="admin-community-leaf admin-community-leaf-two" />
+            </div>
           </div>
+          <div className="admin-profile-publish-actions">
+            <button className="button admin-profile-action-light" type="button" onClick={() => openProfileComposer('event')}><CalendarDays size={19} /><span>Create Event</span><ArrowRight size={17} /></button>
+            <button className="button admin-profile-action-primary" type="button" onClick={() => openProfileComposer('video')}><Play size={19} /><span>Add Video</span><ArrowRight size={17} /></button>
+            <button className="button admin-profile-action-light" type="button" onClick={() => openProfileComposer('gallery')}><Image size={19} /><span>Create Gallery</span><ArrowRight size={17} /></button>
+          </div>
+          <section className="admin-profile-details" aria-labelledby="admin-profile-details-title">
+            <h3 id="admin-profile-details-title">Post details</h3>
+            <label htmlFor="admin-post-display-name">Display name</label>
+            <div className="admin-profile-detail-field"><UserRound size={18} aria-hidden="true" /><input id="admin-post-display-name" value={profileName} onChange={(event) => setProfileName(event.target.value)} maxLength={80} /></div>
+            <label htmlFor="admin-post-email">Email address</label>
+            <div className="admin-profile-detail-field"><Mail size={18} aria-hidden="true" /><input id="admin-post-email" type="email" value={user.email} readOnly /></div>
+          </section>
         </section>
         <dialog
           ref={publishDialog}
