@@ -311,18 +311,19 @@ button.profile_dropdown_link{width:100%;border:0;background:transparent;text-ali
 .my-cci-view-more{display:inline-flex;align-items:center;gap:5px;margin-top:13px;padding:3px 0;border:0;background:transparent;color:var(--my-cci-navy);font:700 12px 'DM Sans',sans-serif;cursor:pointer}
 .my-cci-view-more svg{width:15px;height:15px;transition:transform .18s}
 .my-cci-view-more svg.is-expanded{transform:rotate(180deg)}
-.my-cci-connect{padding-block:86px 94px;background:#fff}
-.my-cci-connect-grid{display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);align-items:center;gap:clamp(38px,7vw,96px)}
+.my-cci-connect{padding-block:44px 50px;background:#fff}
+.my-cci-connect-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);align-items:center;gap:clamp(32px,5vw,64px)}
 .my-cci-connect-copy{max-width:540px}
 .my-cci-connect-visual{min-width:0;margin:0;overflow:hidden;border:1px solid rgba(16,42,86,.14);border-radius:8px;background:#fff;box-shadow:0 18px 46px rgba(16,42,86,.1)}
 .my-cci-connect-visual img{display:block;width:100%;aspect-ratio:1.28;object-fit:cover;object-position:center}
-.my-cci-connect-visual .player-wrapper{position:relative;aspect-ratio:3/2;overflow:hidden;background:#fff}
+.my-cci-connect-visual .player-wrapper{position:relative;aspect-ratio:16/9;overflow:hidden;background:#fff}
 .my-cci-connect-visual .video-holder{position:absolute;inset:0;width:100%;height:100%}
 .my-cci-connect-visual .video-holder video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#fff}
 .my-cci-connect-visual .video-controller{position:absolute;right:0;bottom:0;left:0;background:linear-gradient(transparent,rgba(8,13,22,.92))}
 .my-cci-connect-visual figcaption{padding:13px 16px;color:var(--my-cci-ink);font:400 12px/1.5 'DM Sans',sans-serif}
 @media(max-width:900px){
-	.my-cci-why-grid,.my-cci-connect-grid{gap:34px}
+	.my-cci-why-grid{gap:34px}
+	.my-cci-connect-grid{gap:30px}
 	.my-cci-benefit-card{flex-basis:calc((100% - 20px)/2)}
 	.my-cci-benefit-card>img{height:190px}
 	.my-cci-benefit-copy{min-height:158px}
@@ -342,7 +343,7 @@ button.profile_dropdown_link{width:100%;border:0;background:transparent;text-ali
 	.my-cci-benefit-card{flex-basis:min(82%,340px)}
 	.my-cci-benefit-card>img{height:190px}
 	.my-cci-benefit-copy{min-height:142px;padding:16px}
-	.my-cci-connect{padding-block:58px 66px}
+	.my-cci-connect{padding-block:42px 48px}
 	.my-cci-connect-visual img{aspect-ratio:1}
 }
 	.site-header .profile_image.profile-initial{width:34px;height:34px;flex:0 0 34px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;line-height:1;text-align:center}
@@ -367,7 +368,7 @@ button.profile_dropdown_link{width:100%;border:0;background:transparent;text-ali
 }
 
 .my-cci-connect-visual{box-shadow:none}
-.my-cci-connect-visual .player-wrapper{width:100%;aspect-ratio:3/2}
+.my-cci-connect-visual .player-wrapper{width:100%;aspect-ratio:16/9}
 .my-cci-connect-visual .video-controller{height:76px}
 .admin-layout.admin-profile-page{grid-template-columns:minmax(250px,.72fr) minmax(0,1.6fr);gap:clamp(28px,5vw,76px)}
 .admin-profile-editor{padding:0;border:0;background:transparent}
