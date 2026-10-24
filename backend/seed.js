@@ -76,8 +76,24 @@ const accounts = [
   { name: 'bandile mdluli', email: 'bandile@outlook.com', role: 'user' }
 ];
 
-async function seedDatabase() {
-  const passwordHash = await bcrypt.hash('Password123', 12);
+async function retireLegacySeedPassword(user) {
+  if (user?.passwordHash && await bcrypt.compare('Password123', user.passwordHash)) {
+    user.passwordHash = '';
+    await user.save();
+  }
+}
+
+async function seedDatabase({ setInitialUserPasswords = false } = {}) {
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || '';
+  if (adminPassword && adminPassword.length < 16) {
+    throw new Error('SEED_ADMIN_PASSWORD must contain at least 16 characters.');
+  }
+  const initialUserPassword = setInitialUserPasswords ? process.env.SEED_USERS_PASSWORD || '' : '';
+  if (setInitialUserPasswords && initialUserPassword.length < 8) {
+    throw new Error('SEED_USERS_PASSWORD must contain at least 8 characters.');
+  }
+  const adminPasswordHash = adminPassword ? await bcrypt.hash(adminPassword, 12) : '';
+  const initialUserPasswordHash = initialUserPassword ? await bcrypt.hash(initialUserPassword, 12) : '';
   const legacyAccounts = [
     ['zibekeliyema@outlook.com', adminEmail],
     ['zibekeonwabe@outlook.com', 'onwabe@outlook.com'],
@@ -86,6 +102,8 @@ async function seedDatabase() {
   for (const [legacyEmail, currentEmail] of legacyAccounts) {
     const legacyAccount = await User.findOne({ email: legacyEmail });
     const currentAccount = await User.findOne({ email: currentEmail });
+    await retireLegacySeedPassword(legacyAccount);
+    await retireLegacySeedPassword(currentAccount);
     if (legacyAccount && !currentAccount) {
       legacyAccount.email = currentEmail;
       await legacyAccount.save();
@@ -93,19 +111,30 @@ async function seedDatabase() {
   }
   const users = {};
   for (const account of accounts) {
-    users[account.email] = await User.findOneAndUpdate(
+    const existingAccount = await User.findOne({ email: account.email });
+    await retireLegacySeedPassword(existingAccount);
+    if (existingAccount && account.role === 'admin' && adminPasswordHash && !existingAccount.passwordHash) {
+      existingAccount.passwordHash = adminPasswordHash;
+      await existingAccount.save();
+    }
+    const seededAccount = await User.findOneAndUpdate(
       { email: account.email },
       {
         $setOnInsert: {
           name: account.name,
           email: account.email,
           role: account.role,
-          passwordHash,
+          passwordHash: account.role === 'admin' ? adminPasswordHash : '',
           authProvider: 'local'
         }
       },
       { upsert: true, new: true, runValidators: true }
     );
+    if (setInitialUserPasswords) {
+      seededAccount.passwordHash = initialUserPasswordHash;
+      await seededAccount.save();
+    }
+    users[account.email] = seededAccount;
   }
 
   const admin = users[adminEmail];
@@ -375,9 +404,14 @@ async function seedDatabase() {
 
 if (require.main === module) {
   mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cci-community-portal')
-    .then(seedDatabase)
+    .then(() => seedDatabase({ setInitialUserPasswords: process.argv.includes('--set-initial-user-passwords') }))
     .then(() => mongoose.disconnect())
-    .then(() => console.log('CCI seed data is ready.'))
+    .then(() => {
+      if (process.argv.includes('--set-initial-user-passwords')) {
+        console.warn('The same initial password was set for all three seeded accounts. Have each user change it immediately.');
+      }
+      console.log('CCI seed data is ready.');
+    })
     .catch((error) => {
       console.error('CCI seed failed:', error);
       process.exitCode = 1;

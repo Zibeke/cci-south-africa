@@ -29,7 +29,16 @@ const { authenticate, requireAdmin } = require('./middleware/auth');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: process.env.CLIENT_ORIGIN || 'http://localhost:3005', credentials: true } });
+const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3005';
+const allowedSocketOrigin = new URL(clientOrigin).origin;
+const io = new Server(server, {
+  cors: { origin: allowedSocketOrigin, credentials: true },
+  allowRequest: (request, callback) => {
+    const origin = request.headers.origin;
+    const sameOriginRequest = !origin && request.headers['sec-fetch-site'] === 'same-origin';
+    callback(null, sameOriginRequest || origin === allowedSocketOrigin);
+  }
+});
 const onlineUsers = new Map();
 const port = process.env.PORT || 5005;
 const adminEmail = 'zibeke@outlook.com';

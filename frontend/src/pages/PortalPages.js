@@ -377,6 +377,16 @@ function userId(value) {
   return typeof value === 'string' ? value : value?._id || value?.id || '';
 }
 
+function chatDayLabel(value) {
+  const date = new Date(value);
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
 export function ChatPage({ admin = false }) {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
@@ -583,11 +593,14 @@ export function ChatPage({ admin = false }) {
         <section className={`chat-conversation${selected ? ' is-active' : ''}`} aria-label="Conversation">
           {selected ? <>
             <header className="conversation-header"><button className="conversation-back bare-icon-button" type="button" aria-label="Back to conversations" onClick={() => setSelected(null)}><ArrowLeft aria-hidden="true" /></button><span className="chat-avatar conversation-avatar"><ProfileAvatar profile={selected} /></span><div className="conversation-person"><h2>{selected.name}</h2><p className={`presence${selected.status === 'online' ? ' is-online' : ''}${typing ? ' is-typing' : ''}`}>{typing ? 'Typing…' : selected.status === 'online' ? 'Online' : 'Offline'}</p></div><div className="conversation-actions"><button className="bare-icon-button" type="button" aria-label="Search conversation" onClick={() => document.querySelector('.chat-search input')?.focus()}><Search aria-hidden="true" /></button><button className="bare-icon-button" type="button" aria-label="More options"><MoreVertical aria-hidden="true" /></button></div></header>
-            <div className="message-history" ref={messageHistory} role="log" aria-live="polite" aria-label="Message history" aria-busy={messagesLoading}><div className="chat-date-divider"><span>Today</span></div>{messagesLoading
+            <div className="message-history" ref={messageHistory} role="log" aria-live="polite" aria-label="Message history" aria-busy={messagesLoading}>{messagesLoading
               ? <div className="message-loading-skeleton" aria-label="Loading messages">{[0, 1, 2].map((item) => <div className={`message-skeleton-row${item % 2 ? ' is-sent' : ''}`} key={item}><span className="skeleton-block message-skeleton-bubble"><i className="skeleton-block skeleton-line" /><i className="skeleton-block skeleton-line" /></span></div>)}</div>
-              : messages.map((message) => {
+              : messages.map((message, index) => {
               const sent = userId(message.senderId) === user.id;
-              return <div className={`message-row ${sent ? 'sent' : 'received'}`} key={message._id}><div className="message-bubble"><p>{message.message}</p><time>{new Date(message.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}{sent && (message.status === 'sent' ? <Check size={13} aria-label="Sent" /> : <CheckCheck size={13} className={message.status === 'read' ? 'message-receipt-read' : ''} aria-label={message.status === 'read' ? 'Read' : 'Delivered'} />)}</time></div></div>;
+              const messageDate = new Date(message.createdAt);
+              const previousDate = index > 0 ? new Date(messages[index - 1].createdAt) : null;
+              const startsDay = !previousDate || messageDate.toDateString() !== previousDate.toDateString();
+              return <React.Fragment key={message._id}>{startsDay && <div className="chat-date-divider"><span>{chatDayLabel(message.createdAt)}</span></div>}<div className={`message-row ${sent ? 'sent' : 'received'}`}><div className="message-bubble"><p>{message.message}</p><time>{messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}{sent && (message.status === 'sent' ? <Check size={13} aria-label="Sent" /> : <CheckCheck size={13} className={message.status === 'read' ? 'message-receipt-read' : ''} aria-label={message.status === 'read' ? 'Read' : 'Delivered'} />)}</time></div></div></React.Fragment>;
             })}</div>
             <form className="message-composer" onSubmit={sendMessage}><button className="bare-icon-button composer-attach" type="button" aria-label="Attach file"><Paperclip aria-hidden="true" /></button><textarea rows="1" placeholder="Write a message" aria-label="Write a message" value={draft} onChange={(event) => updateDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form.requestSubmit(); } }} /><button className="composer-send" type="submit" aria-label="Send message"><Send aria-hidden="true" /></button></form>
           </> : <div className="chat-welcome"><img className="chat-welcome-logo" src="/images/chatLogo.png" alt="" /><h2>Welcome to CCI Connect</h2><p>Connect with colleagues and management through secure, professional conversations. Please keep messages work-related and avoid sharing payment card data or other sensitive personal information.</p></div>}

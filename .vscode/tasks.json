@@ -26,6 +26,17 @@
 			],
 			"isBackground": false,
 			"problemMatcher": []
+		},
+		{
+			"label": "Check backend JavaScript syntax",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--check",
+				"backend/src/server.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }
