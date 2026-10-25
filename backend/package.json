@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "set-account-passwords": "node set-account-passwords.js"
   },
   "dependencies": {
     "@azure/msal-node": "^2.16.2",

@@ -76,13 +76,6 @@ const accounts = [
   { name: 'bandile mdluli', email: 'bandile@outlook.com', role: 'user' }
 ];
 
-async function retireLegacySeedPassword(user) {
-  if (user?.passwordHash && await bcrypt.compare('Password123', user.passwordHash)) {
-    user.passwordHash = '';
-    await user.save();
-  }
-}
-
 async function seedDatabase({ setInitialUserPasswords = false } = {}) {
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || '';
   if (adminPassword && adminPassword.length < 16) {
@@ -102,8 +95,6 @@ async function seedDatabase({ setInitialUserPasswords = false } = {}) {
   for (const [legacyEmail, currentEmail] of legacyAccounts) {
     const legacyAccount = await User.findOne({ email: legacyEmail });
     const currentAccount = await User.findOne({ email: currentEmail });
-    await retireLegacySeedPassword(legacyAccount);
-    await retireLegacySeedPassword(currentAccount);
     if (legacyAccount && !currentAccount) {
       legacyAccount.email = currentEmail;
       await legacyAccount.save();
@@ -112,7 +103,6 @@ async function seedDatabase({ setInitialUserPasswords = false } = {}) {
   const users = {};
   for (const account of accounts) {
     const existingAccount = await User.findOne({ email: account.email });
-    await retireLegacySeedPassword(existingAccount);
     if (existingAccount && account.role === 'admin' && adminPasswordHash && !existingAccount.passwordHash) {
       existingAccount.passwordHash = adminPasswordHash;
       await existingAccount.save();

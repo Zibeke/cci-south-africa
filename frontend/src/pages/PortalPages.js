@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, Check, CheckCheck, Ellipsis, Heart, House, MessageCircle, X,
+  ArrowLeft, Check, CheckCheck, Ellipsis, Heart, House, MessageCircle, Trash2, X,
   MoreVertical, Paperclip, Search, Send, SquarePen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +10,10 @@ import { API_BASE_URL, api, backendUrl } from '../api';
 import { EventArticle } from './shared/EventContentEditor';
 
 function requestError(error) {
-  return error.response?.data?.message || 'We could not load this content. Please try again.';
+  if (error.response?.data?.message) return error.response.data.message;
+  if (error.response) return `The server returned an error (HTTP ${error.response.status}). Please try again.`;
+  if (error.request) return 'Could not reach the server. Check the connection and try again.';
+  return error.message || 'We could not load this content. Please try again.';
 }
 
 function imageSource(image) {
@@ -64,6 +67,7 @@ export function EventsPage({ admin = false, eventId }) {
   const [error, setError] = useState('');
   const [likesOpen, setLikesOpen] = useState({});
   const [commentsOpen, setCommentsOpen] = useState({});
+  const [deletingEventId, setDeletingEventId] = useState('');
   const commentInputRefs = useRef({});
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -72,16 +76,18 @@ export function EventsPage({ admin = false, eventId }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([
+    Promise.allSettled([
       api.get('/api/events'),
       api.get('/api/notifications'),
       api.get('/api/events?upcoming=true')
-    ]).then(([eventResponse, notificationResponse, upcomingResponse]) => {
+    ]).then((results) => {
       if (!active) return;
-      setEvents(eventResponse.data);
-      setNotifications(notificationResponse.data);
-      setUpcoming(upcomingResponse.data);
-      setError('');
+      const [eventsResult, notificationsResult, upcomingResult] = results;
+      if (eventsResult.status === 'fulfilled') setEvents(eventsResult.value.data);
+      if (notificationsResult.status === 'fulfilled') setNotifications(notificationsResult.value.data);
+      if (upcomingResult.status === 'fulfilled') setUpcoming(upcomingResult.value.data);
+      const failedResult = results.find((result) => result.status === 'rejected');
+      setError(failedResult ? requestError(failedResult.reason) : '');
     }).catch((loadError) => {
       if (active) setError(requestError(loadError));
     }).finally(() => {
@@ -153,6 +159,26 @@ export function EventsPage({ admin = false, eventId }) {
     }
   }
 
+  async function deleteEvent(event) {
+    if (!window.confirm(`Delete "${event.title}"? This cannot be undone.`)) return;
+    setDeletingEventId(event._id);
+    try {
+      await api.delete(`/api/admin/events/${event._id}`);
+      setEvents((current) => current.filter((item) => item._id !== event._id));
+      setUpcoming((current) => current.filter((item) => item._id !== event._id));
+      navigate('/admin/events', { replace: true });
+    } catch (deleteError) {
+      const statusCode = deleteError.response?.status;
+      if (statusCode === 404) {
+        setError('The delete endpoint was not found. Restart or redeploy the backend, then try again.');
+      } else {
+        setError(requestError(deleteError));
+      }
+    } finally {
+      setDeletingEventId('');
+    }
+  }
+
   async function openNotification(notification) {
     if (!await markRead(notification)) return;
     const base = admin ? '/admin' : '';
@@ -212,6 +238,7 @@ export function EventsPage({ admin = false, eventId }) {
                           <Link className="event-detail-nav-button" to={admin ? '/admin/events' : '/events'} aria-label="Back to posts" onClick={() => setSearchParams({})}><ArrowLeft aria-hidden="true" /></Link>
                           <ProfileAvatar profile={author} className="post-avatar" />
                           <div className="post-author"><div className="event-detail-author-row"><strong>{author.name || 'CCI South Africa'}</strong><span>{authorHandle && `@${authorHandle}`}</span></div><time dateTime={event.createdAt}>Posted {createdAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time></div>
+                          {admin && event.type === 'event' && String(author._id || author.id) === String(user.id) && <button className="event-detail-nav-button event-detail-delete" type="button" aria-label={`Delete ${event.title}`} title="Delete event" disabled={deletingEventId === event._id} onClick={() => deleteEvent(event)}><Trash2 aria-hidden="true" /></button>}
                           <Link className="event-detail-nav-button event-detail-close" to={admin ? '/admin/events' : '/events'} aria-label="Close event details" onClick={() => setSearchParams({})}><X aria-hidden="true" /></Link>
                         </header>
                         : <header className="post-header">
@@ -387,11 +414,24 @@ function chatDayLabel(value) {
   return date.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+function chatListTime(value) {
+  const date = new Date(value);
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' });
+}
+
 export function ChatPage({ admin = false }) {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [searchResults, setSearchResults] = useState([]);
+  const [eventSearchResults, setEventSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -403,6 +443,7 @@ export function ChatPage({ admin = false }) {
   const [draft, setDraft] = useState('');
   const [typing, setTyping] = useState(false);
   const [error, setError] = useState('');
+  const [socketError, setSocketError] = useState('');
   const homeLinkRef = useRef(null);
   const socketRef = useRef(null);
   const selectedRef = useRef(selected);
@@ -424,7 +465,8 @@ export function ChatPage({ admin = false }) {
       .finally(() => { if (active) setUsersLoading(false); });
     const socket = io(API_BASE_URL || window.location.origin, { withCredentials: true });
     socketRef.current = socket;
-    socket.on('connect_error', (connectionError) => setError(connectionError.message || 'Chat connection failed.'));
+    socket.on('connect', () => setSocketError(''));
+    socket.on('connect_error', () => setSocketError('Live updates are unavailable. Refresh to check for new messages.'));
     socket.on('message:new', (message) => {
       const activeSelection = selectedRef.current;
       const isForSelected = [user.id, activeSelection?.id].includes(userId(message.senderId)) &&
@@ -489,15 +531,20 @@ export function ChatPage({ admin = false }) {
     if (!search.trim()) {
       setSearchLoading(false);
       setSearchResults([]);
+      setEventSearchResults([]);
       return undefined;
     }
     let active = true;
     const timer = window.setTimeout(() => {
-      api.get('/api/users/search', { params: { q: search.trim() } })
-        .then(({ data }) => {
+      Promise.all([
+        api.get('/api/users/search', { params: { q: search.trim() } }),
+        api.get('/api/events', { params: { q: search.trim() } })
+      ])
+        .then(([{ data: people }, { data: events }]) => {
           if (!active) return;
-          setUsers(data);
-          setSearchResults(data);
+          setUsers(people);
+          setSearchResults(people);
+          setEventSearchResults(events);
         })
         .catch((loadError) => { if (active) setError(requestError(loadError)); })
         .finally(() => { if (active) setSearchLoading(false); });
@@ -544,7 +591,7 @@ export function ChatPage({ admin = false }) {
     if (left.lastMessageAt) return -1;
     if (right.lastMessageAt) return 1;
     return left.name.localeCompare(right.name);
-  }).filter((person) => filter !== 'unread' || person.unreadCount > 0);
+  }).filter((person) => search.trim() || filter !== 'unread' || person.unreadCount > 0);
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -575,19 +622,43 @@ export function ChatPage({ admin = false }) {
       <section className="chat-workspace" aria-label="Messages">
         <aside className="chat-sidebar">
           <div className="chat-sidebar-heading"><h1>Messages</h1><div className="chat-heading-actions"><Link ref={homeLinkRef} to={`${pageBase}/home`} className="chat-home-action" hidden={!homeRevealed}><House aria-hidden="true" /><span>Home</span></Link><button className="bare-icon-button" id="chat-home-reveal" type="button" aria-label="Show home link" hidden={homeRevealed} onClick={() => setHomeRevealed(true)}><SquarePen aria-hidden="true" /></button></div></div>
-          <label className="chat-search"><Search aria-hidden="true" /><input type="search" placeholder="Search people or messages" autoComplete="off" value={search} onChange={(event) => updateSearch(event.target.value)} /></label>
+          <label className="chat-search"><Search aria-hidden="true" /><input type="search" placeholder="Search people and events" autoComplete="off" value={search} onChange={(event) => updateSearch(event.target.value)} /></label>
           <div className="chat-filter-tabs" role="tablist" aria-label="Message filters"><button className={`chat-filter${filter === 'all' ? ' is-active' : ''}`} type="button" onClick={() => setFilter('all')}>All</button><button className={`chat-filter${filter === 'unread' ? ' is-active' : ''}`} type="button" onClick={() => setFilter('unread')}>Unread{totalUnreadCount > 0 && <span>{totalUnreadCount}</span>}</button></div>
           {error && <p className="message-feedback" role="alert">{error}</p>}
           <div className="chat-contact-list" aria-label="Recent conversations" aria-busy={usersLoading || searchLoading}>
             {(usersLoading || searchLoading) && Array.from({ length: 6 }, (_, index) => <div className="chat-contact chat-contact-skeleton" key={`skeleton-${index}`} aria-hidden="true"><span className="chat-avatar skeleton-block" /><span className="chat-contact-copy"><i className="skeleton-block skeleton-line skeleton-contact-name" /><i className="skeleton-block skeleton-line skeleton-contact-preview" /></span></div>)}
-            {!usersLoading && !searchLoading && contactList.map((contact) => <button className={`chat-contact${selected?.id === contact.id ? ' is-selected' : ''}`} type="button" key={contact.id} onClick={() => setSelected(contact)} data-status={contact.status} data-unread={contact.unreadCount} aria-label={`${contact.name}${contact.unreadCount ? `, ${contact.unreadCount} unread messages` : ''}`}>
-              <span className="chat-avatar"><ProfileAvatar profile={contact} /><span className="chat-contact-presence" data-presence={contact.status} /></span>
-              <span className="chat-contact-copy"><span className="chat-contact-top"><strong>{contact.name}</strong><time>{contact.lastMessageAt ? new Date(contact.lastMessageAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}</time></span><span className="chat-contact-preview">{contact.status === 'typing' ? 'typing…' : contact.preview || (search.trim() ? 'Start a conversation' : '')}</span></span>
-              {contact.unreadCount > 0 && <span className="unread-pill" aria-hidden="true">{contact.unreadCount}</span>}
-            </button>)}
-            {!usersLoading && !searchLoading && contactList.length === 0 && (search.trim()
-              ? <p className="chat-search-empty">No people found.</p>
-              : <div className="chat-search-empty chat-start-new"><strong>{filter === 'unread' ? 'No unread messages' : 'Start a new chat'}</strong>{filter !== 'unread' && <span>Search for a colleague to start a conversation.</span>}</div>)}
+            {socketError && <p className="message-feedback" role="status">{socketError}</p>}
+            <div hidden={usersLoading || searchLoading || !search.trim()}>
+              <h2 className="chat-search-section-title">People</h2>
+              {contactList.map((contact) => (
+                <button className={`chat-contact${selected?.id === contact.id ? ' is-selected' : ''}`} type="button" key={contact.id} onClick={() => setSelected(contact)} data-status={contact.status} data-unread={contact.unreadCount} aria-label={contact.name}>
+                  <span className="chat-avatar"><ProfileAvatar profile={contact} /><span className="chat-contact-presence" data-presence={contact.status} /></span>
+                  <span className="chat-contact-copy"><span className="chat-contact-top"><strong>{contact.name}</strong></span><span className="chat-contact-preview">{contact.email}</span></span>
+                </button>
+              ))}
+              {!contactList.length && <p className="chat-search-empty">No people found.</p>}
+              <h2 className="chat-search-section-title">Events</h2>
+              {eventSearchResults.map((event) => (
+                <Link className="chat-search-event" key={event._id} to={pageBase + '/events/' + event._id}>
+                  <strong>{event.title}</strong>
+                  <span>{event.isUpcoming && event.startsAt ? new Date(event.startsAt).toLocaleDateString() : new Date(event.createdAt).toLocaleDateString()}</span>
+                </Link>
+              ))}
+              {!eventSearchResults.length && <p className="chat-search-empty">No matching events.</p>}
+            </div>
+            {!usersLoading && !searchLoading && !search.trim() && contactList.map((contact) => (
+              <button className={`chat-contact${selected?.id === contact.id ? ' is-selected' : ''}`} type="button" key={contact.id} onClick={() => setSelected(contact)} data-status={contact.status} data-unread={contact.unreadCount} aria-label={`${contact.name}${contact.unreadCount ? `, ${contact.unreadCount} unread messages` : ''}`}>
+                <span className="chat-avatar"><ProfileAvatar profile={contact} /><span className="chat-contact-presence" data-presence={contact.status} /></span>
+                <span className="chat-contact-copy"><span className="chat-contact-top"><strong>{contact.name}</strong><time>{contact.lastMessageAt ? chatListTime(contact.lastMessageAt) : ''}</time></span><span className="chat-contact-preview">{contact.status === 'typing' ? 'typing…' : contact.preview}</span></span>
+                {contact.unreadCount > 0 && <span className="unread-pill" aria-hidden="true">{contact.unreadCount}</span>}
+              </button>
+            ))}
+            {!usersLoading && !searchLoading && !search.trim() && contactList.length === 0 && (
+              <div className="chat-search-empty chat-start-new">
+                <strong>{filter === 'unread' ? 'No unread messages' : 'Start a new chat'}</strong>
+                {filter !== 'unread' && <span>Search for a colleague to start a conversation.</span>}
+              </div>
+            )}
           </div>
         </aside>
         <section className={`chat-conversation${selected ? ' is-active' : ''}`} aria-label="Conversation">

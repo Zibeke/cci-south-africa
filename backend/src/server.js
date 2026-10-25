@@ -29,14 +29,16 @@ const { authenticate, requireAdmin } = require('./middleware/auth');
 
 const app = express();
 const server = http.createServer(app);
-const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3005';
-const allowedSocketOrigin = new URL(clientOrigin).origin;
+const clientOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:3005')
+  .split(',')
+  .map((origin) => new URL(origin.trim()).origin);
+const clientOrigin = clientOrigins[0];
 const io = new Server(server, {
-  cors: { origin: allowedSocketOrigin, credentials: true },
+  cors: { origin: clientOrigins, credentials: true },
   allowRequest: (request, callback) => {
     const origin = request.headers.origin;
     const sameOriginRequest = !origin && request.headers['sec-fetch-site'] === 'same-origin';
-    callback(null, sameOriginRequest || origin === allowedSocketOrigin);
+    callback(null, sameOriginRequest || clientOrigins.includes(origin));
   }
 });
 const onlineUsers = new Map();
@@ -46,7 +48,7 @@ const uploadDir = path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3005', credentials: true }));
+app.use(cors({ origin: clientOrigins, credentials: true }));
 app.use(morgan('tiny'));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
@@ -55,7 +57,7 @@ app.use('/original-site', (req, res, next) => {
   res.removeHeader('X-Frame-Options');
   res.setHeader(
     'Content-Security-Policy',
-    `default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; media-src 'self' data: blob: https:; connect-src 'self' https:; frame-ancestors 'self' ${process.env.CLIENT_ORIGIN || 'http://localhost:3005'}; form-action 'self' https:`
+    `default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; media-src 'self' data: blob: https:; connect-src 'self' https:; frame-ancestors 'self' ${clientOrigins.join(' ')}; form-action 'self' https:`
   );
   if (['/home.html', '/events.html', '/gallery.html', '/chat.html'].includes(req.path)) {
     return authenticate(req, res, next);
@@ -343,7 +345,18 @@ app.get('/api/posts', authenticate, async (req, res) => {
 
 app.get('/api/events', authenticate, async (req, res) => {
   const upcomingOnly = req.query.upcoming === 'true';
-  const events = await Event.find({ isUpcoming: upcomingOnly, status: { $ne: 'draft' } })
+  const search = String(req.query.q || '').trim().slice(0, 60);
+  const query = { status: { $ne: 'draft' } };
+  if (!search) query.isUpcoming = upcomingOnly;
+  if (search) {
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    query.$or = [
+      { title: new RegExp(escapedSearch, 'i') },
+      { description: new RegExp(escapedSearch, 'i') },
+      { hashtags: new RegExp(escapedSearch, 'i') }
+    ];
+  }
+  const events = await Event.find(query)
     .populate('createdBy', 'name email photo role')
     .populate('likes', 'name photo')
     .populate('comments.userId', 'name photo role')
@@ -410,6 +423,23 @@ app.patch('/api/admin/events/:id', authenticate, requireAdmin, async (req, res) 
     io.emit('notification:new', notification);
   }
   res.json(event);
+});
+
+app.delete('/api/admin/events/:id', authenticate, requireAdmin, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Event not found.' });
+  const event = await Event.findOne({ _id: req.params.id, type: 'event' }).select('createdBy');
+  if (!event) return res.status(404).json({ message: 'Event not found.' });
+  if (String(event.createdBy) !== String(req.user._id)) {
+    return res.status(403).json({ message: 'You can only delete events you posted.' });
+  }
+
+  await Promise.all([
+    Carousel.deleteMany({ itemType: 'event', itemId: event._id }),
+    Notification.deleteMany({ type: 'event', relatedId: event._id })
+  ]);
+  const deletion = await Event.deleteOne({ _id: event._id, type: 'event' });
+  if (deletion.deletedCount !== 1) return res.status(404).json({ message: 'Event not found.' });
+  res.json({ ok: true });
 });
 
 app.get('/api/gallery', authenticate, async (req, res) => {

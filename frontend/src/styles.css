@@ -46,6 +46,8 @@
 .event-detail-nav-button{width:38px;height:38px;display:grid;place-items:center;flex:none;border:0;border-radius:4px;background:transparent;color:var(--ink)}
 .event-detail-nav-button:hover{background:transparent}
 .event-detail-nav-button svg{width:19px;height:19px}
+.event-detail-delete{color:#a33427;cursor:pointer}
+.event-detail-delete:disabled{opacity:.55;cursor:wait}
 .event-detail-close{margin-left:auto;background:transparent;color:var(--ink)}
 .event-detail-close:hover{background:transparent}
 .event-detail-header .post-avatar{width:42px;height:42px;flex:none;border-radius:50%;object-fit:cover}
@@ -94,6 +96,11 @@ button.profile_dropdown_link{width:100%;border:0;background:transparent;text-ali
 .chat-contact-preview{display:block;overflow:hidden;margin-top:5px;text-overflow:ellipsis;white-space:nowrap}
 .chat-contact[data-unread]:not([data-unread="0"]) .chat-contact-copy{font-weight:600}
 .unread-pill{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border-radius:50%;background:#c62828;color:#fff;font-size:9px;font-weight:700}
+.chat-search-section-title{margin:14px 18px 5px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase}
+.chat-search-event{display:flex;flex-direction:column;gap:5px;margin:2px 10px;padding:12px;border-radius:7px;color:var(--ink)}
+.chat-search-event:hover{background:rgba(16,42,67,.055)}
+.chat-search-event strong{font-size:12px}
+.chat-search-event span{color:var(--muted);font-size:10px}
 .chat-start-new{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center}
 .chat-start-new strong{color:var(--ink);font-size:13px}
 .chat-start-new span{max-width:220px;color:var(--muted);font-size:11px;line-height:1.5}
