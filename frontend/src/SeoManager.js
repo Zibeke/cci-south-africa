@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 const SITE_URL = 'https://cci-connect.onrender.com';
 const SOCIAL_IMAGE = `${SITE_URL}/images/logo2.png`;
-const HOME_DESCRIPTION = 'Explore CCI Connect, a demonstration of a community portal featuring employee engagement, events, galleries and communication tools. This is a demo and not the official CCI website.';
+const HOME_DESCRIPTION = 'This is a demonstration website and is NOT the official CCI website.';
 
 const privatePages = {
   home: {

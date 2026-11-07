@@ -92,9 +92,6 @@ export default function SageEssPage() {
     <>
       <SiteHeader page="sage-ess" admin={user?.role === 'admin'} />
       <main className="sage-ess-page">
-        <aside className="sage-demo-note" role="note">
-          This is a demonstration website and is NOT the official CCI website. Sage ESS is a demonstration interface, not a live service.
-        </aside>
         <section className="sage-welcome" aria-label="Welcome">
           <h1>{employeeName ? <><span>Welcome back,</span><strong>{employeeName}</strong></> : 'Welcome back'}</h1>
         </section>

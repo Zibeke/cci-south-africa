@@ -37,4 +37,3 @@
 .sage-profile-details dd{overflow-wrap:anywhere;margin:0;color:#24374d;font-size:14px;font-weight:600}
 @media(max-width:700px){.sage-ess-page{padding:34px 18px 60px}.sage-welcome{margin-bottom:31px}.sage-welcome h1,.sage-welcome h1 strong{font-size:30px}.sage-balance-grid{grid-template-columns:1fr;gap:12px}.sage-balance-card{min-height:120px;padding:21px 24px}.sage-balance-value{font-size:38px}.sage-services{margin-top:29px}.sage-tabs{min-width:650px;grid-template-columns:repeat(5,minmax(130px,1fr));padding-top:17px}.sage-tab{min-height:62px;padding-inline:8px;font-size:13px}.sage-tab-panel{padding-top:23px}.sage-payslips-table{min-width:540px}.sage-leave-form,.sage-profile-details{grid-template-columns:1fr}.sage-leave-form .sage-leave-reason{grid-column:auto}}
 @media(prefers-reduced-motion:reduce){.sage-tab-indicator{transition:none}}
-.sage-demo-note{border-left-color:#d3ec61}
