@@ -11,6 +11,10 @@ const contentBlockSchema = new mongoose.Schema({
   content: { type: String, default: '', maxlength: 12000 },
   headingLevel: { type: String, enum: ['h2', 'h3'], default: 'h2' },
   src: { type: String, default: '' },
+  srcAsset: {
+    publicId: { type: String, default: '' },
+    resourceType: { type: String, enum: ['image', 'video'], default: 'image' }
+  },
   alt: { type: String, default: '', maxlength: 300 },
   caption: { type: String, default: '', maxlength: 500 },
   url: { type: String, default: '' },
@@ -23,7 +27,15 @@ const eventSchema = new mongoose.Schema({
   description: { type: String, trim: true, maxlength: 12000, default: '' },
   contentBlocks: { type: [contentBlockSchema], default: undefined },
   image: { type: String, default: '' },
+  imageAsset: {
+    publicId: { type: String, default: '' },
+    resourceType: { type: String, enum: ['image', 'video'], default: 'image' }
+  },
   videoUrl: { type: String, default: '' },
+  videoAsset: {
+    publicId: { type: String, default: '' },
+    resourceType: { type: String, enum: ['image', 'video'], default: 'video' }
+  },
   type: { type: String, enum: ['event', 'video'], required: true, default: 'event' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

@@ -8,7 +8,9 @@ async function authenticate(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(payload.sub).select('-passwordHash');
-    if (!user) return res.status(401).json({ message: 'Your session has expired.' });
+    if (!user || Number(payload.sessionVersion || 0) !== Number(user.sessionVersion || 0)) {
+      return res.status(401).json({ message: 'Your session has expired.' });
+    }
     req.user = user;
     next();
   } catch (error) {

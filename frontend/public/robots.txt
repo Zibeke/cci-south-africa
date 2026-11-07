@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /admin
+Disallow: /admin/
+Disallow: /users
+Disallow: /users/
+Disallow: /home
+Disallow: /my-cci
+Disallow: /events
+Disallow: /gallery
+Disallow: /chat
+Disallow: /sage-ess
+Disallow: /api/
+Disallow: /original-site/home.html
+Disallow: /original-site/events.html
+Disallow: /original-site/gallery.html
+Disallow: /original-site/chat.html
+Disallow: /original-site/login.html
+
+Sitemap: https://cci-connect.onrender.com/sitemap.xml

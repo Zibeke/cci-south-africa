@@ -170,7 +170,7 @@ export function EventsPage({ admin = false, eventId }) {
     } catch (deleteError) {
       const statusCode = deleteError.response?.status;
       if (statusCode === 404) {
-        setError('The delete endpoint was not found. Restart or redeploy the backend, then try again.');
+        setError('The backend could not find this item. If you are deleting a video, restart or redeploy the backend to load video-delete support, then try again.');
       } else {
         setError(requestError(deleteError));
       }
@@ -238,7 +238,7 @@ export function EventsPage({ admin = false, eventId }) {
                           <Link className="event-detail-nav-button" to={admin ? '/admin/events' : '/events'} aria-label="Back to posts" onClick={() => setSearchParams({})}><ArrowLeft aria-hidden="true" /></Link>
                           <ProfileAvatar profile={author} className="post-avatar" />
                           <div className="post-author"><div className="event-detail-author-row"><strong>{author.name || 'CCI South Africa'}</strong><span>{authorHandle && `@${authorHandle}`}</span></div><time dateTime={event.createdAt}>Posted {createdAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time></div>
-                          {admin && event.type === 'event' && String(author._id || author.id) === String(user.id) && <button className="event-detail-nav-button event-detail-delete" type="button" aria-label={`Delete ${event.title}`} title="Delete event" disabled={deletingEventId === event._id} onClick={() => deleteEvent(event)}><Trash2 aria-hidden="true" /></button>}
+                          {admin && String(author._id || author.id) === String(user.id) && <button className="event-detail-nav-button event-detail-delete" type="button" aria-label={`Delete ${event.title || (event.type === 'video' ? 'video' : 'event')}`} title={`Delete ${event.type === 'video' ? 'video' : 'event'}`} disabled={deletingEventId === event._id} onClick={() => deleteEvent(event)}><Trash2 aria-hidden="true" /></button>}
                           <Link className="event-detail-nav-button event-detail-close" to={admin ? '/admin/events' : '/events'} aria-label="Close event details" onClick={() => setSearchParams({})}><X aria-hidden="true" /></Link>
                         </header>
                         : <header className="post-header">
@@ -249,7 +249,7 @@ export function EventsPage({ admin = false, eventId }) {
                         </header>}
                       <div className={`post-content${isDetail ? ' event-detail-content' : ''}`}>
                         {event.title && <h2>{event.title}</h2>}
-                        {isDetail && event.type === 'video' && <video controls playsInline preload="metadata" poster={backendUrl('/original-site/CCI/videoImage.png')}><source src={backendUrl(event.videoUrl)} /></video>}
+                        {isDetail && event.type === 'video' && <video controls playsInline preload="metadata" poster={event.image ? imageSource(event.image) : undefined}><source src={backendUrl(event.videoUrl)} /></video>}
                         {isDetail && event.type !== 'video' && event.image && <img src={imageSource(event.image)} alt={event.title || ''} />}
                         {isDetail && event.type === 'event' && event.startsAt && <p className="event-detail-meta"><strong>Date</strong><time dateTime={event.startsAt}>{new Date(event.startsAt).toLocaleString()}</time></p>}
                         {isDetail && event.type === 'event' && event.location && <p className="event-detail-meta"><strong>Location</strong><span>{event.location}</span></p>}
@@ -258,7 +258,7 @@ export function EventsPage({ admin = false, eventId }) {
                           ? <EventArticle blocks={event.contentBlocks} />
                           : event.description && (isDetail ? renderArticle(event.description) : <p>{descriptionExcerpt}</p>)}
                         {!isDetail && event.type === 'video'
-                          ? <video controls playsInline preload="metadata" poster={backendUrl('/original-site/CCI/videoImage.png')}><source src={backendUrl(event.videoUrl)} /></video>
+                          ? <video controls playsInline preload="metadata" poster={event.image ? imageSource(event.image) : undefined}><source src={backendUrl(event.videoUrl)} /></video>
                           : !isDetail && event.image && <img src={imageSource(event.image)} alt={event.title || ''} />}
                         {isDetail && event.type === 'event' && <img className="post-brand-footer" src="https://connect.cci-digital.cloud/wp-content/uploads/2026/02/Connect_layout-03.png" alt="" />}
                       </div>
@@ -464,6 +464,8 @@ export function ChatPage({ admin = false }) {
       .catch((loadError) => { if (active) setError(requestError(loadError)); })
       .finally(() => { if (active) setUsersLoading(false); });
     const socket = io(API_BASE_URL || window.location.origin, { withCredentials: true });
+    const disconnectSocket = () => socket.disconnect();
+    window.addEventListener('cci:logout', disconnectSocket);
     socketRef.current = socket;
     socket.on('connect', () => setSocketError(''));
     socket.on('connect_error', () => setSocketError('Live updates are unavailable. Refresh to check for new messages.'));
@@ -504,6 +506,7 @@ export function ChatPage({ admin = false }) {
     return () => {
       active = false;
       window.clearTimeout(typingTimer.current);
+      window.removeEventListener('cci:logout', disconnectSocket);
       socket.disconnect();
     };
   }, [user.id]);

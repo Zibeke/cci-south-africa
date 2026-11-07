@@ -6,3 +6,4 @@ backend/uploads/*
 frontend/build/
 responsive-mega-menu/
 npm-debug.log*
+CCI_SECURITY_REMEDIATION_TRACKER.md

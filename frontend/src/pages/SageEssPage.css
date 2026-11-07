@@ -1,0 +1,40 @@
+.sage-ess-page{width:100%;min-height:calc(100vh - var(--nav-height,80px));margin:0;padding:52px max(40px,calc((100% - 1552px)/2)) 80px;background:#fff;color:#152239}
+.sage-welcome{margin-bottom:39px}
+.sage-welcome h1{display:flex;flex-direction:column;gap:3px;margin:0;font:600 36px/1.12 'Space Grotesk',sans-serif;letter-spacing:0}
+.sage-welcome h1 span{color:#425a78;font:400 16px/1.45 'DM Sans',sans-serif}
+.sage-welcome h1 strong{font:600 36px/1.12 'Space Grotesk',sans-serif;letter-spacing:0}
+.sage-balances h2{margin:0 0 17px;color:#10294d;font:600 21px/1.3 'Space Grotesk',sans-serif;letter-spacing:0}
+.sage-balance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.sage-balance-card{min-height:150px;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:25px 31px;border-radius:8px;background:#0d2f5e;color:#fff}
+.sage-balance-value{margin:0;font:600 44px/1 'Space Grotesk',sans-serif;font-variant-numeric:tabular-nums;letter-spacing:0}
+.sage-balance-card h3{margin:0;color:#fff;font:500 16px/1.35 'DM Sans',sans-serif;letter-spacing:0}
+.sage-balance-status{margin:12px 0 0;color:#7a8796;font-size:12px;line-height:1.5}
+.sage-services{margin-top:37px;border-top:1px solid #dfe5ec}
+.sage-tab-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#c3ccd7 transparent}
+.sage-tabs{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;min-width:720px;padding-top:24px}
+.sage-tab{min-height:58px;padding:0 12px 17px;border:0;background:transparent;color:#7a8796;font:500 14px/1.35 'DM Sans',sans-serif;text-align:center;white-space:normal;cursor:pointer}
+.sage-tab.is-active{color:#10294d;font-weight:700}
+.sage-tab-indicator{position:absolute;bottom:0;left:0;width:20%;height:2px;background:#10294d;transition:transform .28s cubic-bezier(.2,.7,.25,1)}
+.sage-tab-panel{min-height:200px;padding-top:30px;outline:none}
+.sage-table-wrap{overflow-x:auto}
+.sage-payslips-table{width:100%;border-collapse:collapse;text-align:left}
+.sage-payslips-table th{padding:0 18px 14px;color:#68788b;font-size:12px;font-weight:600}
+.sage-payslips-table td{padding:18px;border-top:1px solid #e6ebf0;color:#768394;font-size:13px}
+.sage-empty-state{margin:0;padding:20px 0;color:#768394;font-size:14px;line-height:1.6}
+.sage-panel{max-width:760px}
+.sage-panel h2{margin:0 0 7px;color:#10294d;font:600 20px/1.3 'Space Grotesk',sans-serif;letter-spacing:0}
+.sage-unavailable-note{margin:0 0 20px;color:#768394;font-size:13px;line-height:1.55}
+.sage-leave-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.sage-leave-form label{display:flex;flex-direction:column;gap:7px;color:#35485e;font-size:12px;font-weight:600}
+.sage-leave-form input,.sage-leave-form select,.sage-leave-form textarea{width:100%;min-height:42px;padding:10px 11px;border:1px solid #d5dde6;border-radius:3px;background:#fff;color:#24374d;font:400 13px 'DM Sans',sans-serif}
+.sage-leave-form textarea{min-height:92px;resize:vertical}
+.sage-leave-form .sage-leave-reason{grid-column:1/-1}
+.sage-submit-button{min-height:42px;justify-self:start;padding:0 18px;border:0;border-radius:3px;background:#0d2f5e;color:#fff;font-size:13px;font-weight:600}
+.sage-submit-button:disabled{background:#aeb9c5;cursor:not-allowed}
+.sage-profile-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:23px 0}
+.sage-profile-details div{min-width:0;padding:13px 0;border-bottom:1px solid #e3e8ee}
+.sage-profile-details dt{margin-bottom:6px;color:#7a8796;font-size:11px}
+.sage-profile-details dd{overflow-wrap:anywhere;margin:0;color:#24374d;font-size:14px;font-weight:600}
+@media(max-width:700px){.sage-ess-page{padding:34px 18px 60px}.sage-welcome{margin-bottom:31px}.sage-welcome h1,.sage-welcome h1 strong{font-size:30px}.sage-balance-grid{grid-template-columns:1fr;gap:12px}.sage-balance-card{min-height:120px;padding:21px 24px}.sage-balance-value{font-size:38px}.sage-services{margin-top:29px}.sage-tabs{min-width:650px;grid-template-columns:repeat(5,minmax(130px,1fr));padding-top:17px}.sage-tab{min-height:62px;padding-inline:8px;font-size:13px}.sage-tab-panel{padding-top:23px}.sage-payslips-table{min-width:540px}.sage-leave-form,.sage-profile-details{grid-template-columns:1fr}.sage-leave-form .sage-leave-reason{grid-column:auto}}
+@media(prefers-reduced-motion:reduce){.sage-tab-indicator{transition:none}}
+.sage-demo-note{border-left-color:#d3ec61}

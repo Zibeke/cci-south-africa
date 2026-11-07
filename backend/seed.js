@@ -3,6 +3,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('./src/models/User');
+const Post = require('./src/models/Post');
 const Event = require('./src/models/Event');
 const Gallery = require('./src/models/Gallery');
 const Carousel = require('./src/models/Carousel');
@@ -128,6 +129,44 @@ async function seedDatabase({ setInitialUserPasswords = false } = {}) {
   }
 
   const admin = users[adminEmail];
+  const seededEvents = await Event.find({
+    $or: [
+      { seedKey: { $in: ['careerbox-feature', 'champions-feature', 'growth-feature', 'heritage-video'] } },
+      { seedKey: /^upcoming:/ }
+    ]
+  }).select('_id').lean();
+  const seededGalleries = await Gallery.find({
+    createdBy: admin._id,
+    $or: [
+      { heading: 'Dinner of Champions', 'galleryImages.0': 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=85' },
+      { heading: 'Heritage Day Cook-Off', 'galleryImages.0': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=85' },
+      { heading: 'People of CCI', 'galleryImages.0': 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1200&q=85' },
+      { heading: 'Community Impact', 'galleryImages.0': 'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&w=1200&q=85' }
+    ]
+  }).select('_id').lean();
+  const seededEventIds = seededEvents.map(({ _id }) => _id);
+  const seededGalleryIds = seededGalleries.map(({ _id }) => _id);
+  await Promise.all([
+    Event.deleteMany({ _id: { $in: seededEventIds } }),
+    Gallery.deleteMany({ _id: { $in: seededGalleryIds } }),
+    Post.deleteMany({
+      $or: [
+        { relatedId: { $in: seededEventIds }, relatedType: 'event' },
+        { relatedId: { $in: seededGalleryIds }, relatedType: 'gallery' }
+      ]
+    }),
+    Carousel.deleteMany({ itemId: { $in: [...seededEventIds, ...seededGalleryIds] } }),
+    Notification.deleteMany({
+      $or: [
+        { relatedId: { $in: seededEventIds } },
+        { type: 'gallery', title: 'New photos', message: 'New photos from Heritage Day Cook-Off are available.' },
+        { type: 'upcoming', title: 'Community Career Day', message: 'is coming up in Johannesburg.' },
+        { type: 'hashtag', title: { $in: ['#PeopleFirst', '#CareerBox', '#CCICommunity', '#LifeAtCCI'] }, message: 'Popular community tag.' }
+      ]
+    })
+  ]);
+
+  async function seedDemoContent() {
   const eventSeeds = [
     {
       key: 'careerbox-feature',
@@ -302,6 +341,8 @@ async function seedDatabase({ setInitialUserPasswords = false } = {}) {
       { upsert: true, runValidators: true }
     );
   }
+  }
+  if (process.env.SEED_DEMO_CONTENT === 'true') await seedDemoContent();
 
   const chatSeeds = [
     {

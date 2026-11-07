@@ -318,6 +318,14 @@ button.profile_dropdown_link{width:100%;border:0;background:transparent;text-ali
 .my-cci-view-more{display:inline-flex;align-items:center;gap:5px;margin-top:13px;padding:3px 0;border:0;background:transparent;color:var(--my-cci-navy);font:700 12px 'DM Sans',sans-serif;cursor:pointer}
 .my-cci-view-more svg{width:15px;height:15px;transition:transform .18s}
 .my-cci-view-more svg.is-expanded{transform:rotate(180deg)}
+.demo-disclaimer{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 24px;border-bottom:3px solid var(--lime);background:var(--ink);color:var(--white);text-align:center}
+.demo-disclaimer h1{margin:0;color:var(--lime);font:600 16px/1.35 'Space Grotesk',sans-serif}
+.demo-disclaimer p{margin:0;font-size:13px;line-height:1.5}
+.demo-footer-note{width:min(calc(100% - 48px),var(--container));margin:0 auto;padding:0 0 22px;color:rgba(255,255,255,.82);font-size:12px;line-height:1.5}
+.demo-login-notice{margin:0 0 14px;padding:10px 12px;border-left:3px solid var(--lime);background:#f3f6e8;color:var(--ink);font-size:12px;line-height:1.5}
+.login-page .login-panel h1{margin:0 0 14px;color:#1b1b1b;font-size:24px;font-weight:600;letter-spacing:-.03em}
+.sage-demo-note{margin:0 0 30px;padding:13px 16px;border-left:4px solid var(--lime);background:#f3f6e8;color:var(--ink);font-size:13px;line-height:1.55}
+@media(max-width:700px){.demo-disclaimer{flex-direction:column;gap:4px;padding:12px 18px}.demo-disclaimer h1{font-size:15px}.demo-disclaimer p{font-size:12px}.demo-footer-note{width:calc(100% - 36px);padding-bottom:18px}}
 .my-cci-connect{padding-block:44px 50px;background:#fff}
 .my-cci-connect-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);align-items:center;gap:clamp(32px,5vw,64px)}
 .my-cci-connect-copy{max-width:540px}

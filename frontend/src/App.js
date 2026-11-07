@@ -5,9 +5,11 @@ import { api, backendUrl } from './api';
 import UserPages from './pages/users';
 import AdminPages from './pages/admin';
 import CommunityPage, { SiteHeader } from './pages/CommunityPage';
+import SageEssPage from './pages/SageEssPage';
 import UserLoginPage from './pages/users/login';
 import Landing from './pages/Landing';
 import EventContentEditor from './pages/shared/EventContentEditor';
+import SeoManager from './SeoManager';
 import {
   ArrowRight, CalendarDays, Camera, Check, Heart, Image, Mail, Pencil, Play, Save, ShieldCheck, Upload, UserRound, Users, X
 } from 'lucide-react';
@@ -17,7 +19,8 @@ function errorText(error) {
 }
 
 const emptyAdminEvent = () => ({
-  title: '', description: '', contentBlocks: [], image: '', startsAt: '', location: '',
+  title: '', description: '', contentBlocks: [], image: '', imagePublicId: '', imageResourceType: '',
+  startsAt: '', location: '',
   registrationUrl: '', isUpcoming: false, status: 'draft', showInCarousel: false
 });
 
@@ -35,6 +38,7 @@ export default function App() {
   const contextValue = useMemo(() => ({ user, setUser, checking }), [user, checking]);
   return (
     <AuthContext.Provider value={contextValue}>
+      <SeoManager />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -45,6 +49,7 @@ export default function App() {
         <Route path="/events/:eventId" element={<Protected><EventDetail /></Protected>} />
         <Route path="/gallery" element={<Protected><CommunityPage page="gallery" /></Protected>} />
         <Route path="/chat" element={<Protected><CommunityPage page="chat" /></Protected>} />
+        <Route path="/sage-ess" element={<Protected><SageEssPage /></Protected>} />
         <Route path="/users/*" element={<Protected><UserPages /></Protected>} />
         <Route path="/admin/*" element={<Protected admin><AdminPages Admin={Admin} /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -101,7 +106,7 @@ function EventPublishFields({ eventDraft, setEventDraft, onUploadImage }) {
       <label>Event date and time<input type="datetime-local" value={eventDraft.startsAt} onChange={(event) => setEventDraft((current) => ({ ...current, startsAt: event.target.value }))} /></label>
       <label>Location<input value={eventDraft.location} onChange={(event) => setEventDraft((current) => ({ ...current, location: event.target.value }))} maxLength={240} /></label>
       <label>Registration URL<input type="url" value={eventDraft.registrationUrl} onChange={(event) => setEventDraft((current) => ({ ...current, registrationUrl: event.target.value }))} placeholder="https://" /></label>
-      <label className="publish-event-featured">Featured image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => { void onUploadImage(event.target.files?.[0], (image) => setEventDraft((current) => ({ ...current, image }))); }} />{eventDraft.image && <img src={backendUrl(eventDraft.image)} alt="Featured event preview" />}</label>
+      <label className="publish-event-featured">Featured image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => { void onUploadImage(event.target.files?.[0], (asset) => setEventDraft((current) => ({ ...current, image: asset.image, imagePublicId: asset.imagePublicId, imageResourceType: asset.imageResourceType }))); }} />{eventDraft.image && <img src={backendUrl(eventDraft.image)} alt="Featured event preview" />}</label>
       <label>Publishing status<select value={eventDraft.status} onChange={(event) => setEventDraft((current) => ({ ...current, status: event.target.value }))}><option value="draft">Save as draft</option><option value="published">Publish event</option></select></label>
       <label className="publish-event-upcoming"><input type="checkbox" checked={eventDraft.isUpcoming} onChange={(event) => setEventDraft((current) => ({ ...current, isUpcoming: event.target.checked }))} />Show in upcoming events</label>
       <label className="publish-event-carousel"><input type="checkbox" checked={eventDraft.showInCarousel} onChange={(event) => setEventDraft((current) => ({ ...current, showInCarousel: event.target.checked }))} /><span><strong>Feature in home carousel</strong><small>Uses the event title, featured image, and an article snippet. The carousel keeps four newest items across Events, Videos, and Gallery.</small></span></label>
@@ -119,6 +124,7 @@ function Admin({ profilePage = false }) {
   const [kind, setKind] = useState('event');
   const [profileComposerOpen, setProfileComposerOpen] = useState(false);
   const [videoUrl, setVideoUrl] = useState('');
+  const [coverImage, setCoverImage] = useState(null);
   const [heading, setHeading] = useState('');
   const [description, setDescription] = useState('');
   const [files, setFiles] = useState([]);
@@ -140,12 +146,14 @@ function Admin({ profilePage = false }) {
   function selectKind(value) {
     setKind(value);
     setFiles([]);
+    setCoverImage(null);
     setCarousel(false);
     setVideoUrl('');
   }
   function openProfileComposer(value) {
     setKind(value);
     setFiles([]);
+    setCoverImage(null);
     setCarousel(false);
     setVideoUrl('');
     if (value === 'event') setEventDraft(emptyAdminEvent());
@@ -158,7 +166,7 @@ function Admin({ profilePage = false }) {
     body.append('image', file);
     try {
       const { data } = await api.post('/api/admin/event-images', body);
-      onUploaded(data.image);
+      onUploaded(data);
       setError('');
     } catch (requestError) {
       setError(errorText(requestError));
@@ -215,6 +223,7 @@ function Admin({ profilePage = false }) {
     body.append('showInCarousel', String(carousel));
     body.append('carouselIndex', carouselIndex);
     body.append('videoUrl', videoUrl.trim());
+    if (coverImage) body.append('coverImage', coverImage);
     files.forEach((file) => body.append('media', file));
     setBusy(true);
     setStatus('');
@@ -224,6 +233,7 @@ function Admin({ profilePage = false }) {
       setHeading('');
       setDescription('');
       setFiles([]);
+      setCoverImage(null);
       setCarousel(false);
       setCarouselIndex('0');
       setVideoUrl('');
@@ -322,11 +332,11 @@ function Admin({ profilePage = false }) {
           <form className={`publish-form${kind === 'event' ? ' publish-event-form' : ''}`} onSubmit={publish}>
             {kind === 'event' && <EventPublishFields eventDraft={eventDraft} setEventDraft={setEventDraft} onUploadImage={uploadEventImage} />}
             {kind !== 'video' && kind !== 'event' && <><label htmlFor="post-heading">Heading</label><input id="post-heading" value={heading} onChange={(event) => setHeading(event.target.value)} placeholder="Album title" maxLength={140} required /><label htmlFor="post-description">Description <span>Optional</span></label><textarea id="post-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="A few words about this update" rows={3} maxLength={1200} /></>}
-            {kind === 'video' && <><label htmlFor="post-video-url">Video URL <span>Optional if you upload a file</span></label><input id="post-video-url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://example.com/video.mp4" type="url" /></>}
+            {kind === 'video' && <><label htmlFor="post-video-url">Video URL <span>Optional if you upload a file</span></label><input id="post-video-url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://example.com/video.mp4" type="url" /><label htmlFor="post-cover-image">Cover image <span>Optional</span></label><input id="post-cover-image" className="file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => setCoverImage(event.target.files?.[0] || null)} /><small className="field-hint">Optional · JPG, PNG, WebP or GIF · up to 25 MB. Without a cover, the video’s opening frame is shown.</small>{coverImage && <div className="selected-files"><span><Check size={14} />{coverImage.name}</span></div>}</>}
             {kind !== 'event' && <>
               <label htmlFor="post-media">{kind === 'video' ? 'Video file' : 'Images'} <span>{kind === 'gallery' ? 'Up to 500 images' : 'One file'}</span></label>
               <input id="post-media" className="file-input" type="file" accept={kind === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/png,image/jpeg,image/webp,image/gif'} multiple={kind === 'gallery'} onChange={(event) => { setFiles(Array.from(event.target.files || []).slice(0, maxFiles)); setCarouselIndex('0'); }} required={kind !== 'video' || !videoUrl.trim()} />
-              <small className="field-hint">{kind === 'video' ? 'MP4, WebM or MOV · up to 25 MB' : 'JPG, PNG, WebP or GIF · up to 25 MB per file'}</small>
+              <small className="field-hint">{kind === 'video' ? 'MP4, WebM or MOV · up to 25 MB' : 'JPG, PNG, WebP or GIF · up to 25 MB per file; 50 MB total per gallery'}</small>
               {files.length > 0 && <div className="selected-files">{files.map((file, index) => <span key={`${file.name}-${index}`}><Check size={14} />{file.name}</span>)}</div>}
             </>}
             {kind === 'gallery' && <><label className="carousel-option"><input type="checkbox" checked={carousel} onChange={(event) => setCarousel(event.target.checked)} /><span><strong>Feature in home carousel</strong><small>Feature one selected photo in the carousel.</small></span></label>{carousel && files.length > 1 && <><label htmlFor="carousel-image">Carousel image</label><select id="carousel-image" value={carouselIndex} onChange={(event) => setCarouselIndex(event.target.value)}>{files.map((file, index) => <option key={`${file.name}-${index}`} value={index}>{file.name}</option>)}</select></>}</>}
@@ -344,11 +354,11 @@ function Admin({ profilePage = false }) {
           <form className={`publish-form${kind === 'event' ? ' publish-event-form' : ''}`} onSubmit={publish}>
             {kind === 'event' && <EventPublishFields eventDraft={eventDraft} setEventDraft={setEventDraft} onUploadImage={uploadEventImage} />}
             {kind === 'gallery' && <><label htmlFor="post-heading">Album title</label><input id="post-heading" value={heading} onChange={(event) => setHeading(event.target.value)} placeholder="Album title" maxLength={140} required /><label htmlFor="post-description">Description <span>Optional</span></label><textarea id="post-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="A few words about this update" rows={3} maxLength={1200} /></>}
-            {kind === 'video' && <><label htmlFor="post-video-url">Video URL <span>Optional if you upload a file</span></label><input id="post-video-url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://example.com/video.mp4" type="url" /></>}
+            {kind === 'video' && <><label htmlFor="post-video-url">Video URL <span>Optional if you upload a file</span></label><input id="post-video-url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://example.com/video.mp4" type="url" /><label htmlFor="post-cover-image">Cover image <span>Optional</span></label><input id="post-cover-image" className="file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => setCoverImage(event.target.files?.[0] || null)} /><small className="field-hint">Optional · JPG, PNG, WebP or GIF · up to 25 MB. Without a cover, the video’s opening frame is shown.</small>{coverImage && <div className="selected-files"><span><Check size={14} />{coverImage.name}</span></div>}</>}
             {kind !== 'event' && <>
               <label htmlFor="post-media">{kind === 'video' ? 'Video file' : 'Images'} <span>{kind === 'gallery' ? 'Up to 500 images' : 'One file'}</span></label>
               <input id="post-media" className="file-input" type="file" accept={kind === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/png,image/jpeg,image/webp,image/gif'} multiple={kind === 'gallery'} onChange={(event) => { setFiles(Array.from(event.target.files || []).slice(0, maxFiles)); setCarouselIndex('0'); }} required={kind !== 'video' || !videoUrl.trim()} />
-              <small className="field-hint">{kind === 'video' ? 'MP4, WebM or MOV · up to 25 MB' : 'JPG, PNG, WebP or GIF · up to 25 MB per file'}</small>
+              <small className="field-hint">{kind === 'video' ? 'MP4, WebM or MOV · up to 25 MB' : 'JPG, PNG, WebP or GIF · up to 25 MB per file; 50 MB total per gallery'}</small>
               {files.length > 0 && <div className="selected-files">{files.map((file, index) => <span key={`${file.name}-${index}`}><Check size={14} />{file.name}</span>)}</div>}
             </>}
             {kind === 'gallery' && <><label className="carousel-option"><input type="checkbox" checked={carousel} onChange={(event) => setCarousel(event.target.checked)} /><span><strong>Feature in home carousel</strong><small>Feature one selected photo in the carousel.</small></span></label>{carousel && files.length > 1 && <><label htmlFor="carousel-image">Carousel image</label><select id="carousel-image" value={carouselIndex} onChange={(event) => setCarouselIndex(event.target.value)}>{files.map((file, index) => <option key={`${file.name}-${index}`} value={index}>{file.name}</option>)}</select></>}</>}
