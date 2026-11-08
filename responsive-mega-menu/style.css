@@ -3016,6 +3016,49 @@ body:has(.login-page) {
   font-weight: 600;
 }
 
+.login-email-step,
+.login-password-step {
+
+  display: grid;
+  gap: 11px;
+}
+
+.login-email-step[hidden],
+.login-password-step[hidden] {
+
+  display: none;
+}
+
+.login-change-account {
+
+  width: fit-content;
+  padding: 0;
+
+  color: #0067b8;
+  border: 0;
+  background: transparent;
+
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.login-change-account:hover {
+
+  color: #004578;
+  text-decoration: underline;
+}
+
+.login-account-email {
+
+  margin: 0;
+
+  color: #565656;
+  font-size: 13px;
+}
+
 
 .login-email,
 .login-password {
@@ -3189,8 +3232,28 @@ body:has(.login-page) {
 
   margin-top: 14px;
 
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
   color: #737373;
   font-size: 9px;
+}
+
+.login-admin-link {
+
+  color: #0067b8;
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-admin-link:hover {
+
+  color: #004578;
+  text-decoration: underline;
 }
 
 

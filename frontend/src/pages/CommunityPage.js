@@ -380,8 +380,9 @@ function LoginPage({ onLogin, adminOnly = false }) {
   const [password, setPassword] = useState('');
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState(false);
-  const [stage, setStage] = useState(adminOnly ? 'email' : 'microsoft');
+  const [stage, setStage] = useState('email');
   const [submitting, setSubmitting] = useState(false);
+  const [optionsExpanded, setOptionsExpanded] = useState(false);
 
   useEffect(() => {
     if (!adminOnly && new URLSearchParams(window.location.search).get('error') === 'microsoft') {
@@ -423,6 +424,13 @@ function LoginPage({ onLogin, adminOnly = false }) {
     setStage('password');
   }
 
+  function changeAccount() {
+    setPassword('');
+    setError(false);
+    setFeedback('');
+    setStage('email');
+  }
+
   async function submitPassword(event) {
     event.preventDefault();
     if (!event.currentTarget.checkValidity()) {
@@ -436,24 +444,95 @@ function LoginPage({ onLogin, adminOnly = false }) {
     setFeedback(message);
   }
 
-  return <main className="login-page"><section className="login-illustration" aria-label="CCI Connect demonstration sign-in" /><section className="login-panel" aria-labelledby="sign-in-title"><div className="login-panel-inner">
-    <Link to="/" aria-label="CCI Connect demo website home"><img className="login-organization-logo" src="/images/logo2.png" alt="CCI Connect demo website" /></Link>
-    <h1 id="sign-in-title">Sign in</h1>
-    {stage === 'microsoft' && <><button className="login-options-button" type="button" onClick={startMicrosoft} disabled={submitting}>Continue with Microsoft</button><button className="login-help-link" type="button" onClick={() => { setFeedback(''); setError(false); setStage('email'); }}>Sign in with email instead</button></>}
-    {stage === 'email' && <form className="login-form" onSubmit={continueWithEmail} noValidate>
-      <label htmlFor="login-email">Email</label><input className="login-email" id="login-email" name="email" type="email" autoComplete="email" placeholder="name@outlook.com" value={email} onChange={(event) => setEmail(event.target.value)} aria-describedby="login-feedback" required />
-      <p className={`login-notice${error ? ' is-error' : ''}`} id="login-feedback" role="status" aria-live="polite" hidden={!feedback}>{feedback}</p>
-      <button className="login-next" type="submit">Next</button>
-    </form>}
-    {stage === 'password' && <form className="login-form" onSubmit={submitPassword} noValidate>
-      <div className="login-account"><span className="mini-avatar">{email.slice(0, 1).toUpperCase()}</span><span>{email}</span><button type="button" onClick={() => { setPassword(''); setStage('email'); }}>Change</button></div>
-      <label htmlFor="login-password">Password</label><input className="login-password" id="login-password" name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} aria-describedby="login-email-help login-feedback" required />
-      <a className="login-help-link" id="login-email-help" href="https://aka.ms/sspr" target="_blank" rel="noopener noreferrer">Can’t access your account?</a>
-      <p className={`login-notice${error ? ' is-error' : ''}`} id="login-feedback" role="status" aria-live="polite" hidden={!feedback}>{feedback}</p>
-      <button className="login-next" type="submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button>
-    </form>}
-    {!adminOnly && <p className="login-page-footer"><Link to="/admin/login">Admin login</Link></p>}
-  </div></section></main>;
+  return <main className="cci-login-page">
+    <section className="cci-login-illustration" aria-label="CCI Group sign-in" />
+    <section className="cci-login-panel" aria-labelledby="sign-in-title">
+      <div className="cci-login-panel-inner">
+        <Link to="/" aria-label="CCI Group home">
+          <img
+            className="cci-login-logo"
+            src="https://aadcdn.msauthimages.net/c1c6b6c8-rqhemeuyazxi4kg7jojjjcpqa2vsduk5y3e-k2ayvae/logintenantbranding/0/bannerlogo?ts=638816294952477934"
+            alt="CCI Group"
+          />
+        </Link>
+        <h1 id="sign-in-title">Sign in</h1>
+
+        <p className={`cci-login-feedback${error ? ' is-error' : ''}`} id="login-feedback" role="status" aria-live="polite" hidden={!feedback}>
+          {feedback}
+        </p>
+
+        {stage === 'email' && <form className="cci-login-form" onSubmit={continueWithEmail} noValidate>
+          <label htmlFor="login-email">Email</label>
+          <input
+            className="cci-login-input"
+            id="login-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="name@outlook.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            aria-describedby="login-feedback"
+            autoFocus
+            required
+          />
+          <button className="cci-login-submit" type="submit">Next</button>
+        </form>}
+
+        {stage === 'password' && <form className="cci-login-form" onSubmit={submitPassword} noValidate>
+          <button className="cci-login-change-account" type="button" onClick={changeAccount}>Use another account</button>
+          <p className="cci-login-account-email">{email}</p>
+          <label htmlFor="login-password">Password</label>
+          <input
+            className="cci-login-input"
+            id="login-password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            aria-describedby="login-email-help login-feedback"
+            autoFocus
+            required
+          />
+          <a className="cci-login-help-link" id="login-email-help" href="https://aka.ms/sspr" target="_blank" rel="noopener noreferrer">
+            Can’t access your account?
+          </a>
+          <button className="cci-login-submit" type="submit" disabled={submitting}>
+            {submitting ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>}
+
+        <p className="cci-login-policy">
+          This system (hardware, software, networks, applications, communications, and data) is the property of the CCI Group and is for authorised use by employees and approved contractors only. Access is subject to CCI policies and forms part of the conditions of use. To the extent permitted by law, CCI may monitor, intercept, access, log, review, and record system activity, communications, and data across jurisdictions for security, compliance, investigations, misconduct management, and operations. Users have no expectation of privacy except where required by law. Personal information is processed in accordance with applicable laws and CCI policies for business, legal, regulatory, and employment or contractual purposes. Unauthorised use may result in disciplinary action (including termination), loss of access, civil claims, or referral to authorities. By proceeding, you confirm that you have read, understood, and agree to this notice, CCI policies, and applicable law.
+        </p>
+
+        <div className="cci-login-options">
+          <button
+            className="cci-login-options-button"
+            type="button"
+            aria-expanded={optionsExpanded}
+            aria-controls="cci-login-options-details"
+            onClick={() => setOptionsExpanded((expanded) => !expanded)}
+          >
+            <img src="https://aadcdn.msauth.net/shared/1.0/content/images/signin-options_3e3f6b73c3f310c31d2c4d131a8ab8c6.svg" alt="" />
+            <span>Sign-in options</span>
+          </button>
+          <div className="cci-login-options-details" id="cci-login-options-details" hidden={!optionsExpanded}>
+            {!adminOnly && <button className="cci-login-microsoft" type="button" onClick={startMicrosoft} disabled={submitting}>
+              Continue with Microsoft
+            </button>}
+            <p>{adminOnly ? 'Use your CCI admin email and password to sign in.' : 'Continue with your CCI email and password, or choose Microsoft sign-in.'}</p>
+          </div>
+        </div>
+
+        <p className="cci-login-page-footer">
+          <span>CCI Group · Secure access for employees and approved contractors</span>
+          {!adminOnly && <Link to="/admin/login">Admin login</Link>}
+        </p>
+      </div>
+    </section>
+  </main>;
 }
 
 function HomePage({ landing, admin, user }) {
